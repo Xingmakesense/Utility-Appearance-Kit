@@ -1,0 +1,47 @@
+{
+  "version": 3,
+  "note": "静态能力目录，只声明明确验证过的具体模型。没有厂商级兜底：同一前缀下的非推理文本模型（如 gpt-4o）绝不能因为正则命中而获得档位。wire 只写非恒等的线上值；没有 wire 的档位按 OpenRouter/OpenAI 兼容协议发送同名值。compat 由 pi-ai 根据端点和协议自行检测，本表不再猜测 thinkingFormat。",
+  "vendors": [
+    {
+      "name": "qwen",
+      "match": "^qwen",
+      "exclude": "(image|embed|rerank|tts|asr|ocr)",
+      "api": "openai-completions",
+      "levelsByModel": [
+        { "match": "^qwen3\\.8-", "levels": ["low", "medium", "xhigh"] },
+        { "match": "^qwen3\\.[67]-(max|plus|flash)$", "levels": ["off", "minimal", "low", "medium", "high"] }
+      ]
+    },
+    {
+      "name": "glm",
+      "match": "^glm",
+      "exclude": "(embed|rerank|tts|asr)",
+      "api": "openai-completions",
+      "levelsByModel": [
+        { "match": "^glm-5\\.2(-highspeed)?$", "levels": ["off", "high", "max"], "wire": { "off": "none" } },
+        { "match": "^glm-5\\.3$", "levels": ["low", "high", "max"] },
+        { "match": "^glm-4\\.7$|^glm-5-turbo$", "levels": ["off", "minimal", "low", "medium", "high"] }
+      ]
+    },
+    {
+      "name": "kimi",
+      "match": "^kimi",
+      "exclude": "(image|embed|rerank|tts|asr)",
+      "api": "openai-completions",
+      "levelsByModel": [
+        { "match": "^kimi-k2\\.7-code(-highspeed)?$", "levels": ["minimal", "low", "medium", "high"] },
+        { "match": "^kimi-k2\\.6$", "levels": ["off", "minimal", "low", "medium", "high"] },
+        { "match": "^kimi-k3$", "levels": ["low", "high", "max"] }
+      ]
+    },
+    {
+      "name": "gpt",
+      "match": "^(gpt|o[134])",
+      "exclude": "(embed|tts|audio|realtime|image)",
+      "api": "openai-completions",
+      "levelsByModel": [
+        { "match": "^gpt-5\\.6-sol$", "levels": ["off", "low", "medium", "high", "xhigh", "max"], "wire": { "off": "none" } }
+      ]
+    }
+  ]
+}

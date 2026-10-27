@@ -1,0 +1,71 @@
+{
+  "name": "utility-appearance-kit",
+  "version": "2.0.0",
+  "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示与新版 DSH 自定义档位兼容开关。 · Reasoning-effort slider, pricing indicator, and native custom-effort compatibility.",
+  "type": "module",
+  "main": "host.js",
+  "exports": {
+    ".": "./host.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "client.js",
+    "client/runtime.js",
+    "client/options.js",
+    "client/slider.js",
+    "client/pricing.js",
+    "client/styles.js",
+    "client/topbar.js",
+    "client/apply.js",
+    "host.js",
+    "host/options.js",
+    "host/declarations.js",
+    "host/holiday.js",
+    "host/status.js",
+    "holiday-calendar.js",
+    "holidays.json",
+    "capabilities.json",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "MAINTENANCE.md",
+    "UPLOAD-TO-GITHUB.md",
+    "LICENSE",
+    "scripts/build-client.mjs",
+    "scripts/build-tgz.ps1",
+    "verify-host.cjs",
+    "verify-engine.mjs",
+    "verify-holidays.mjs",
+    "verify-client.mjs",
+    "verify-compat.mjs"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "check": "node scripts/build-client.mjs --check && node --check client.js && node --check host.js && node --check host/options.js && node --check host/declarations.js && node --check host/holiday.js && node --check host/status.js && node --check holiday-calendar.js && node --check scripts/build-client.mjs",
+    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs"
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2"
+  },
+  "keywords": [
+    "dsh",
+    "plugin",
+    "reasoning",
+    "effort",
+    "slider"
+  ],
+  "author": "June M",
+  "license": "MIT"
+}
