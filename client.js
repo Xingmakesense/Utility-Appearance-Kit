@@ -1461,25 +1461,25 @@ const UAK_SETTINGS_CSS = `
 .uak-settings-section { padding: 16px 0; border-bottom: .5px solid var(--dsw-alias-border-l2); }
 .uak-settings-section h2 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
 .uak-setting-url { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
-.uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; font: inherit; font-size: 12px; }
+.uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: #172554; background: rgb(219 234 254 / 32%); border: 1px solid rgb(147 197 253 / 42%); border-radius: 8px; font: inherit; font-size: 12px; }
 .uak-setting-choice { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 12px 0; }
 .uak-setting-choice > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
 .uak-setting-options { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
 .uak-chip { padding: 5px 11px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; font-size: 12px; }
-.uak-chip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
-.uak-chip[data-active="true"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent); border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 30%, transparent); color: var(--dsw-alias-label-primary); }
+.uak-chip:hover { background: rgb(108 150 229 / .1); color: #172554; }
+.uak-chip[data-active="true"] { background: rgb(88 137 230 / .18); border-color: rgb(139 177 255 / .22); color: #1e40af; }
 .uak-setting-sliders { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 24px; }
 .uak-setting-slider { display: grid; grid-template-columns: 100px minmax(80px,1fr) 50px; gap: 10px; align-items: center; min-height: 36px; font-size: 12px; color: var(--dsw-alias-label-secondary); }
-.uak-setting-slider input { width: 100%; accent-color: var(--dsw-alias-state-business-primary); }
+.uak-setting-slider input { width: 100%; accent-color: #689fff; }
 .uak-setting-slider output { color: var(--dsw-alias-label-tertiary); text-align: right; font-variant-numeric: tabular-nums; }
 .uak-book-catalog { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin: 14px 0 20px; }
-.uak-book-option { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; }
+.uak-book-option { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid rgb(148 177 232 / .12); border-radius: 9px; background: rgb(67 106 179 / .07); color: #64748b; cursor: pointer; font: inherit; }
 .uak-book-option strong { font-size: 12px; font-weight: 500; }
 .uak-book-option span { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
-.uak-book-option[data-active="true"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 13%, transparent); border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 34%, transparent); color: var(--dsw-alias-label-primary); }
-.uak-book-option[aria-selected="true"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent); }
-.uak-save { display: block; width: 100%; padding: 10px 16px; border: 1px solid transparent; border-radius: 9px; background: var(--dsw-alias-state-business-primary); color: var(--dsw-alias-on-business-primary, #fff); cursor: pointer; font: inherit; }
-.uak-save:hover { filter: brightness(1.05); }
+.uak-book-option[data-active="true"] { background: rgb(61 125 235 / .2); border-color: rgb(131 176 255 / .45); color: #172554; }
+.uak-book-option[aria-selected="true"] { box-shadow: inset 0 0 0 1px rgb(131 176 255 / .2); }
+.uak-save { display: block; width: 100%; padding: 10px 16px; border: 1px solid rgb(152 190 255 / .35); border-radius: 9px; background: #356fca; color: #fff; cursor: pointer; font: inherit; }
+.uak-save:hover { background: #427ddb; }
 .uak-save:disabled { opacity: .55; cursor: default; }
 .uak-save-message { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
 @media (max-width:650px) { .uak-setting-sliders { grid-template-columns: 1fr; } .uak-book-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); } .uak-setting-choice { align-items: flex-start; } }
@@ -2257,6 +2257,75 @@ const UAK_SETTINGS_CSS = `
     .uak-statsMetric:nth-child(n+3) { border-top: 1px solid var(--dsw-alias-border-l2); }
     .uak-statsFooter { flex-direction: column; gap: 7px; }
     .uak-statsLegend { justify-content: flex-start; }
+}
+/* Blue-white visual language, applied on top of the native layout. */
+.uak-stats { color: #172033; }
+.uak-statsFrame {
+    border-color: rgb(147 197 253 / 48%);
+    background: linear-gradient(135deg,
+        rgb(219 234 254 / var(--uak-card-alpha, .58)),
+        rgb(147 197 253 / var(--uak-card-alpha, .58)));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
+}
+.uak-statsTab { color: #64748b; }
+.uak-statsTab[aria-selected="true"] { color: #172554; border-bottom-color: #2563eb; }
+.uak-statsRange { color: #64748b; }
+.uak-statsRange[aria-pressed="true"] { background: rgb(147 197 253 / 42%); color: #172554; }
+.uak-statsRange:hover { color: #1e40af; }
+.uak-statsYearLabel, .uak-statsMonthLabel { color: #64748b; }
+.uak-statsIconButton { color: #64748b; }
+.uak-statsIconButton:hover:not(:disabled) { background: rgb(239 246 255); color: #2563eb; }
+.uak-statsMonths::before { background: #dbe3ef; }
+.uak-statsMonth { color: #94a3b8; }
+.uak-statsMonthDot { border-color: rgb(219 234 254); background: #cbd5e1; }
+.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
+.uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; }
+.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+.uak-statsMetrics { border-color: #e2e8f0; }
+.uak-statsMetric:nth-child(n+4) { border-top-color: #e2e8f0; }
+.uak-statsMetricLabel { color: #64748b; }
+.uak-statsMetricValue { color: #172554; }
+.uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus { color: #94a3b8; }
+.uak-statsDay { background: #e8edf3; }
+.uak-statsDay[data-level="1"] { background: #dbeafe; }
+.uak-statsDay[data-level="2"] { background: #93c5fd; }
+.uak-statsDay[data-level="3"] { background: #60a5fa; }
+.uak-statsDay[data-level="4"] { background: #2563eb; }
+.uak-statsDay[data-level="5"] { background: #1e3a8a; }
+.uak-statsBook { color: #64748b; }
+.uak-statsBookTitle { color: #172554; }
+.uak-statsBookDescription { color: #1e3a8a; }
+.uak-statsBookAmount { color: #1e3a8a; }
+.uak-statsModelTable { border-color: #e2e8f0; }
+.uak-statsModelRow, .uak-statsModel { border-color: #e2e8f0; }
+.uak-statsModelRowHead { background: rgb(191 219 254 / 32%); color: #1e3a8a; }
+.uak-statsModelId { color: #172554; }
+.uak-statsModelValue { color: #64748b; }
+.uak-statsRetry { border-color: #93c5fd; color: #1e40af; }
+@media (prefers-color-scheme: dark) {
+    .uak-stats, .uak-statsYearLabel, .uak-statsMonthLabel, .uak-statsIconButton,
+    .uak-statsMonth, .uak-statsMetricValue, .uak-statsBookTitle, .uak-statsModelId { color: #dbeafe; }
+    .uak-statsFrame {
+        border-color: rgb(96 165 250 / 38%);
+        background: linear-gradient(135deg, rgb(30 64 175 / 44%), rgb(15 23 42 / 72%));
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 8px 30px rgb(0 0 0 / 22%);
+    }
+    .uak-statsTab, .uak-statsRange, .uak-statsMetricLabel, .uak-statsSectionTitle,
+    .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus, .uak-statsBook,
+    .uak-statsBookDescription, .uak-statsModelValue { color: #bfdbfe; }
+    .uak-statsTab[aria-selected="true"], .uak-statsRange[aria-pressed="true"],
+    .uak-statsMonth[aria-pressed="true"], .uak-statsBookAmount { color: #eff6ff; }
+    .uak-statsRange[aria-pressed="true"] { background: rgb(37 99 235 / 38%); }
+    .uak-statsMonthDot { border-color: rgb(30 64 175 / 55%); }
+    .uak-statsMetrics, .uak-statsMetric:nth-child(n+4),
+    .uak-statsModelTable, .uak-statsModelRow, .uak-statsModel { border-color: rgb(147 197 253 / 22%); }
+    .uak-statsModelRowHead { background: rgb(30 64 175 / 36%); color: #bfdbfe; }
+    .uak-statsDay { background: rgb(148 163 184 / 18%); }
+    .uak-statsDay[data-level="1"] { background: rgb(96 165 250 / 22%); }
+    .uak-statsDay[data-level="2"] { background: rgb(96 165 250 / 40%); }
+    .uak-statsDay[data-level="3"] { background: rgb(96 165 250 / 62%); }
+    .uak-statsDay[data-level="4"] { background: rgb(59 130 246 / 82%); }
+    .uak-statsDay[data-level="5"] { background: #93c5fd; }
 }
 `;
 

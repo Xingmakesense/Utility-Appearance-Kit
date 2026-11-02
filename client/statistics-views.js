@@ -147,6 +147,75 @@
     .uak-statsFooter { flex-direction: column; gap: 7px; }
     .uak-statsLegend { justify-content: flex-start; }
 }
+/* Blue-white visual language, applied on top of the native layout. */
+.uak-stats { color: #172033; }
+.uak-statsFrame {
+    border-color: rgb(147 197 253 / 48%);
+    background: linear-gradient(135deg,
+        rgb(219 234 254 / var(--uak-card-alpha, .58)),
+        rgb(147 197 253 / var(--uak-card-alpha, .58)));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
+}
+.uak-statsTab { color: #64748b; }
+.uak-statsTab[aria-selected="true"] { color: #172554; border-bottom-color: #2563eb; }
+.uak-statsRange { color: #64748b; }
+.uak-statsRange[aria-pressed="true"] { background: rgb(147 197 253 / 42%); color: #172554; }
+.uak-statsRange:hover { color: #1e40af; }
+.uak-statsYearLabel, .uak-statsMonthLabel { color: #64748b; }
+.uak-statsIconButton { color: #64748b; }
+.uak-statsIconButton:hover:not(:disabled) { background: rgb(239 246 255); color: #2563eb; }
+.uak-statsMonths::before { background: #dbe3ef; }
+.uak-statsMonth { color: #94a3b8; }
+.uak-statsMonthDot { border-color: rgb(219 234 254); background: #cbd5e1; }
+.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
+.uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; }
+.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+.uak-statsMetrics { border-color: #e2e8f0; }
+.uak-statsMetric:nth-child(n+4) { border-top-color: #e2e8f0; }
+.uak-statsMetricLabel { color: #64748b; }
+.uak-statsMetricValue { color: #172554; }
+.uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus { color: #94a3b8; }
+.uak-statsDay { background: #e8edf3; }
+.uak-statsDay[data-level="1"] { background: #dbeafe; }
+.uak-statsDay[data-level="2"] { background: #93c5fd; }
+.uak-statsDay[data-level="3"] { background: #60a5fa; }
+.uak-statsDay[data-level="4"] { background: #2563eb; }
+.uak-statsDay[data-level="5"] { background: #1e3a8a; }
+.uak-statsBook { color: #64748b; }
+.uak-statsBookTitle { color: #172554; }
+.uak-statsBookDescription { color: #1e3a8a; }
+.uak-statsBookAmount { color: #1e3a8a; }
+.uak-statsModelTable { border-color: #e2e8f0; }
+.uak-statsModelRow, .uak-statsModel { border-color: #e2e8f0; }
+.uak-statsModelRowHead { background: rgb(191 219 254 / 32%); color: #1e3a8a; }
+.uak-statsModelId { color: #172554; }
+.uak-statsModelValue { color: #64748b; }
+.uak-statsRetry { border-color: #93c5fd; color: #1e40af; }
+@media (prefers-color-scheme: dark) {
+    .uak-stats, .uak-statsYearLabel, .uak-statsMonthLabel, .uak-statsIconButton,
+    .uak-statsMonth, .uak-statsMetricValue, .uak-statsBookTitle, .uak-statsModelId { color: #dbeafe; }
+    .uak-statsFrame {
+        border-color: rgb(96 165 250 / 38%);
+        background: linear-gradient(135deg, rgb(30 64 175 / 44%), rgb(15 23 42 / 72%));
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 8px 30px rgb(0 0 0 / 22%);
+    }
+    .uak-statsTab, .uak-statsRange, .uak-statsMetricLabel, .uak-statsSectionTitle,
+    .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus, .uak-statsBook,
+    .uak-statsBookDescription, .uak-statsModelValue { color: #bfdbfe; }
+    .uak-statsTab[aria-selected="true"], .uak-statsRange[aria-pressed="true"],
+    .uak-statsMonth[aria-pressed="true"], .uak-statsBookAmount { color: #eff6ff; }
+    .uak-statsRange[aria-pressed="true"] { background: rgb(37 99 235 / 38%); }
+    .uak-statsMonthDot { border-color: rgb(30 64 175 / 55%); }
+    .uak-statsMetrics, .uak-statsMetric:nth-child(n+4),
+    .uak-statsModelTable, .uak-statsModelRow, .uak-statsModel { border-color: rgb(147 197 253 / 22%); }
+    .uak-statsModelRowHead { background: rgb(30 64 175 / 36%); color: #bfdbfe; }
+    .uak-statsDay { background: rgb(148 163 184 / 18%); }
+    .uak-statsDay[data-level="1"] { background: rgb(96 165 250 / 22%); }
+    .uak-statsDay[data-level="2"] { background: rgb(96 165 250 / 40%); }
+    .uak-statsDay[data-level="3"] { background: rgb(96 165 250 / 62%); }
+    .uak-statsDay[data-level="4"] { background: rgb(59 130 246 / 82%); }
+    .uak-statsDay[data-level="5"] { background: #93c5fd; }
+}
 `;
 
         function uakStatsStatus(message, options) {
