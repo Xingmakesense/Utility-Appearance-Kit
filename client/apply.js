@@ -109,6 +109,21 @@
                 console.warn("[utility-appearance-kit] top-bar actions skipped:", error);
             }
             try {
+                if (typeof ctx.effect === "function") {
+                    ctx.effect(() => uakMountUiLocale(ctx));
+                    ctx.effect(() => uakMountAppearance());
+                    ctx.effect(() => uakMountSessionLogDismissal());
+                } else {
+                    uakMountAppearance();
+                    uakMountSessionLogDismissal();
+                }
+            } catch (error) { console.warn("[utility-appearance-kit] appearance/log dismissal unavailable:", error); }
+            try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
+            try {
+                if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));
+                else uakRegisterUsagePanel(ctx, uakSettingsStore);
+            } catch (error) { console.warn("[utility-appearance-kit] usage panel unavailable:", error); }
+            try {
                 mountSliderAndPricing(ctx, options);
             } catch (error) {
                 console.warn("[utility-appearance-kit] slider/pricing mount skipped:", error);
@@ -141,6 +156,22 @@
                 mergeCalendar,
                 nextPeakChangeAt,
                 remainingLabel,
-                normalizeOptions
+                normalizeOptions,
+                uakStatsT,
+                uakBooks,
+                uakBookTier,
+                uakHeatThresholds,
+                uakPositiveTokenHistory,
+                uakPerDayEntries,
+                uakMonthHeatmap,
+                uakSummarizeMonth,
+                uakSanitizeSettings,
+                uakFormatNumber,
+                uakStatsMonthTrack,
+                uakStatsHeatmap,
+                uakStatsMetricCards,
+                uakStatsBookComparison,
+                uakStatsModelTable,
+                uakStatsStatus
             };
         }

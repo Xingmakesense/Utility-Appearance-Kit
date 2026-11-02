@@ -8,6 +8,15 @@ const sources = [
     "slider.js",
     "pricing.js",
     "styles.js",
+    "appearance-data.js",
+    "appearance.js",
+    "settings-styles.js",
+    "statistics-i18n.js",
+    "books.js",
+    "statistics.js",
+    "statistics-views.js",
+    "statistics-ui.js",
+    "settings-page.js",
     "topbar.js",
     "apply.js"
 ];

@@ -24,12 +24,26 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "client/pricing.js",
     "client/styles.js",
     "client/topbar.js",
+    "client/appearance-data.js",
+    "client/appearance.js",
+    "client/settings-page.js",
+    "client/settings-styles.js",
+    "client/statistics.js",
+    "client/statistics-i18n.js",
+    "client/statistics-views.js",
+    "client/books.js",
+    "client/statistics-ui.js",
     "client/apply.js",
     "host.js",
     "host/options.js",
     "host/declarations.js",
     "host/holiday.js",
     "host/status.js",
+    "host/appearance.js",
+    "host/usage-store.js",
+    "host/usage-cache.js",
+    "host/usage-ledger.js",
+    "host/usage-route.js",
     "holiday-calendar.js",
     "holidays.json",
     "capabilities.json",
@@ -46,7 +60,9 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "verify-engine.mjs",
     "verify-holidays.mjs",
     "verify-client.mjs",
-    "verify-compat.mjs"
+    "verify-compat.mjs",
+    "verify-features.mjs",
+    "verify-usage.mjs"
 ]) {
         assert.equal(manifest.files.includes(file), true, file + " must stay in the packed files");
     }
@@ -62,9 +78,13 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     assert.equal(client.includes('"sidebar.brand.name"'), true, "brand slot drifted");
     assert.equal(client.includes('name: "conversation.input.model"'), false, "must never replace the model seat");
     assert.equal(client.includes('"sidebar.footer.action"'), false, "subscription card must be in the separate package");
-    assert.equal(client.includes('"settings.section"'), false, "subscription settings must be in the separate package");
+    assert.equal(client.includes('"settings.section"'), true, "native Utility settings section is required");
+    assert.equal(client.includes('id: "utility-appearance-kit"'), true, "settings id must match package identity");
     assert.equal(client.includes("installTopBarActions"), true, "top-bar action installer missing");
-    assert.equal(client.includes("new MutationObserver"), false, "no long-lived DOM observer may remain");
+    assert.equal(client.includes("new MutationObserver"), true, "candidate-node observers must be present");
+    assert.equal(client.includes("new MutationObserver(scan)"), false, "whole-document scans on every mutation are forbidden");
+    assert.equal(client.includes("record.addedNodes.length"), true, "observers must inspect only additions");
+    assert.equal(client.includes("videoUrl"), false, "video wallpaper must stay removed");
     assert.equal(host.includes("installAccountData"), false, "account module must not load in Utility");
     assert.equal(hostDeclarations.includes("MODEL_INFO_TIMEOUT_MS"), true, "model-info timeout must remain");
     assert.equal(hostHoliday.includes("refreshHolidays"), true, "holiday refresh must remain");

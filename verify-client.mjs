@@ -5,6 +5,31 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 globalThis.__DSH_UAK_TEST__ = true;
+const makeElement = (tag = "div") => ({
+    tagName: tag.toUpperCase(), nodeType: 1, children: [], style: { setProperty() {} }, dataset: {},
+    classList: { add() {}, remove() {}, toggle() {} },
+    append(...nodes) { this.children.push(...nodes); }, prepend(...nodes) { this.children.unshift(...nodes); },
+    appendChild(node) { this.children.push(node); return node; },
+    querySelector(selector) {
+        if (selector.startsWith("#")) return this.children.find((node) => node.id === selector.slice(1)) || null;
+        return null;
+    }, querySelectorAll() { return []; }, matches() { return false; },
+    setAttribute() {}, remove() {}, addEventListener() {},
+});
+const documentElement = makeElement("html");
+documentElement.lang = "zh-CN";
+globalThis.document = {
+    documentElement,
+    body: makeElement("body"),
+    head: makeElement("head"),
+    querySelector() { return null; },
+    getElementById() { return null; },
+    createElement: makeElement,
+};
+Object.defineProperty(globalThis, "navigator", { value: { language: "zh-CN" }, configurable: true });
+globalThis.localStorage = { getItem: () => null, setItem() {} };
+globalThis.MutationObserver = class { observe() {} disconnect() {} };
+globalThis.fetch = async () => { throw new Error("offline test"); };
 let captured;
 globalThis.window = {
     __ModuleLoader__: {
@@ -146,6 +171,7 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
             register() { return () => {}; }
         };
         const ctx = {
+            slots,
             effect: (fn) => fn(),
             get: () => undefined,
             inject(services, callback) {
@@ -155,17 +181,18 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
             }
         };
         module.apply(ctx, options);
-        return { injected, slotKeys };
+        return { injected: injected.slice(-1), slotKeys };
     };
     const nativeOnly = capture({ declarations: "off", slider: false });
+    const requiredSlots = ["settings.section", "settings.utility-appearance-kit.item", "conversation.input.dock"];
     assert.deepEqual(nativeOnly.injected, [["slots"]]);
-    assert.deepEqual(nativeOnly.slotKeys, ["sidebar.brand.name"]);
+    assert.deepEqual(nativeOnly.slotKeys, [...requiredSlots, "sidebar.brand.name"]);
     const full = capture({});
     assert.deepEqual(full.injected, [["slots", "modelDirectories", "sessions"]]);
-    assert.deepEqual(full.slotKeys, ["conversation.input.right", "sidebar.brand.name"]);
+    assert.deepEqual(full.slotKeys, [...requiredSlots, "conversation.input.right", "sidebar.brand.name"]);
     const invalid = capture({ slider: "invalid" });
     assert.deepEqual(invalid.injected, [["slots"]]);
-    assert.deepEqual(invalid.slotKeys, ["sidebar.brand.name"]);
+    assert.deepEqual(invalid.slotKeys, [...requiredSlots, "sidebar.brand.name"]);
 }
 
 console.log("client slider and pricing checks passed");

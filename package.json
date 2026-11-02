@@ -1,7 +1,7 @@
 {
   "name": "utility-appearance-kit",
-  "version": "2.0.0",
-  "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示与新版 DSH 自定义档位兼容开关。 · Reasoning-effort slider, pricing indicator, and native custom-effort compatibility.",
+  "version": "2.1.0",
+  "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示、图片壁纸、液态/磨砂玻璃与月度书卷统计。 · Reasoning controls, image wallpaper, layered glass, and monthly usage statistics.",
   "type": "module",
   "main": "host.js",
   "exports": {
@@ -19,12 +19,26 @@
     "client/pricing.js",
     "client/styles.js",
     "client/topbar.js",
+    "client/appearance-data.js",
+    "client/appearance.js",
+    "client/settings-page.js",
+    "client/settings-styles.js",
+    "client/statistics.js",
+    "client/statistics-i18n.js",
+    "client/statistics-views.js",
+    "client/books.js",
+    "client/statistics-ui.js",
     "client/apply.js",
     "host.js",
     "host/options.js",
     "host/declarations.js",
     "host/holiday.js",
     "host/status.js",
+    "host/appearance.js",
+    "host/usage-store.js",
+    "host/usage-cache.js",
+    "host/usage-ledger.js",
+    "host/usage-route.js",
     "holiday-calendar.js",
     "holidays.json",
     "capabilities.json",
@@ -35,13 +49,16 @@
     "MAINTENANCE.md",
     "UPLOAD-TO-GITHUB.md",
     "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "scripts/build-client.mjs",
     "scripts/build-tgz.ps1",
     "verify-host.cjs",
     "verify-engine.mjs",
     "verify-holidays.mjs",
     "verify-client.mjs",
-    "verify-compat.mjs"
+    "verify-compat.mjs",
+    "verify-features.mjs",
+    "verify-usage.mjs"
   ],
   "dsh": {
     "bundle": {
@@ -54,7 +71,7 @@
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check": "node scripts/build-client.mjs --check && node --check client.js && node --check host.js && node --check host/options.js && node --check host/declarations.js && node --check host/holiday.js && node --check host/status.js && node --check holiday-calendar.js && node --check scripts/build-client.mjs",
-    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs"
+    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs && node verify-features.mjs && node verify-usage.mjs"
   },
   "engines": {
     "dsh": ">=0.2.1-rc.2"

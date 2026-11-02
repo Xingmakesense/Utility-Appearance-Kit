@@ -1,6 +1,6 @@
 # Utility-Appearance-Kit
 
-> 版本 `2.0.0` · 需要 DSH `>= 0.2.1-rc.2`
+> 版本 `2.1.0` · 需要 DSH `>= 0.2.1-rc.2`
 
 **在 DeepSeek Harness 输入区直接拖动推理强度，并查看 DeepSeek 峰谷状态。** 滑条紧贴官方模型选择器左侧，按模型的真实档位数伸缩；订阅卡片与认证已拆分为独立的 `dsh-Subscription-Management`。
 
@@ -114,6 +114,25 @@ pnpm pack --pack-destination dist
 
 ---
 
+## 外观与月度书卷
+
+原推理强度滑条、峰谷指示、节假日与档位兼容逻辑保持不变。本版还整合了图片壁纸、液态底层与磨砂卡片；DSH 原生导航、按钮、菜单内容和交互保持原生。未加入视频、独立皮肤抽屉、消息字体或气泡改色。
+
+- 设置 → **外观与月度书卷**：图片壁纸、显示模式、透明度/模糊/缩放/滤镜、统计面板与数字单位。修改先保存在页面草稿中，点击底部的 **保存配置** 统一应用；需要重启时会明确提示。
+- 默认首次只读参考原 `dsh-skin-master` 图片配置，之后使用 DSH 数据目录下的 `utility-appearance-kit/settings.json` 和 `assets/`。不会改写原 skin 配置。
+- 空白会话页显示与输入框同宽的月度统计卡。默认当前年月，可切换年份和1–12月；六项指标、月度模型、书籍折算均按所选月份的真实数据计算。
+- 热力日期格保持正方形，按每日 Token 显示五档蓝色。历史最早 Token 记录所在月使用固定阈值；之后以全部正消耗历史日的第60百分位为上限，前四档均分，第五档为高于该上限。零消耗日为中性色，不占五档。
+- 书籍对比始终开启，支持随机或固定书目；篇幅分为“短章”（不足5万字）、“中构”（5万至不足30万字）、“鸿篇”（30万字及以上），不同版本字数以约数表示。
+- DSH 下载 Session 日志的弹窗正常展示2秒后仅触发关闭，不自动下载、上传或删除日志；此保护始终启用，无设置开关。
+
+月度聚合只读 DSH 会话日志，解析缓存和累计账本独立保存到 `<DSH_HOME>/utility-appearance-kit/cache/`，不读取或复用原统计插件的账本。删除账本将丢失已从磁盘删除的会话所对应的历史计数。统计接口需要同源自定义请求头，壁纸路由仅接受受支持的图片类型。
+
+The statistics card, book catalog, native settings page and save feedback follow the DSH interface language (Simplified Chinese or English). English uses the book titles, `Short / Medium / Epic`, and short number units where automatic units are selected.
+
+Performance safeguards: DOM observers inspect only added candidate nodes; identical appearance settings do not trigger repaints or storage writes; statistics are fetched only for a visible blank session; cached summaries are shared; directory traversal is reused briefly; compact on-disk counters retain nonzero hours and drop zero-token model entries. Valid lifetime history is not capped or discarded. No additional debug log is written by these additions.
+
+来源与第三方 MIT 许可说明见 `THIRD_PARTY_NOTICES.md`。
+
 ## 配置
 
 插件没有必填配置项，默认 `declarations: "auto"`、`slider: true`。在插件自己的 bundle row 上可写：
@@ -179,10 +198,10 @@ node verify-compat.mjs                # 与已安装 DSH 的槽位/版本兼容
 ## 兼容性
 
 - **DSH** `>= 0.2.1-rc.2`；
-- **槽位**：`conversation.input.right`（滑条）、`sidebar.brand.name`（峰谷）；
+- **槽位**：`conversation.input.right`（滑条）、`sidebar.brand.name`（峰谷）、`conversation.input.dock`（月度统计）、`settings.section`（独立设置页）；
 - **可选本地服务**：`modelDirectories` 与 `sessions`（仅滑条需要）；
 - **平台**：DSH Desktop，Web 端可用；
-- 已在 DSH `0.2.1-rc.3` 上验证。
+- 已在 DSH `0.2.1-rc.5` 上通过静态兼容检查；真实浏览器视觉效果与交互仍需人工验收。
 
 ---
 
@@ -206,6 +225,15 @@ node verify-compat.mjs                # 与已安装 DSH 的槽位/版本兼容
 | `client/pricing.js` | 峰谷 pill、节假日读取与品牌栏 |
 | `client/styles.js` | 统一样式安装与卸载 |
 | `client/topbar.js` | Windows 顶栏入口 |
+| `client/appearance-data.js` | 外观默认值、设置存储、图片上传与语言订阅 |
+| `client/appearance.js` | 图片壁纸、玻璃效果与日志弹窗处理 |
+| `client/settings-page.js` | 原生二级设置页、横向选项与统一保存 |
+| `client/settings-styles.js` | 设置页独立样式 |
+| `client/statistics-i18n.js` | 统计卡中英文文案 |
+| `client/books.js` | 书目数据、篇幅与 Token 对照 |
+| `client/statistics.js` | 月度统计、日历与自适应 Token 分档纯函数 |
+| `client/statistics-views.js` | 月份轨道、六卡、热力、书籍和模型展示块 |
+| `client/statistics-ui.js` | 统计状态、按需抓取、拖动交互与槽位注册 |
 | `client/apply.js` | 独立挂载、槽位注册、清理与测试导出 |
 | `scripts/build-client.mjs` | 无依赖拼接构建，支持 `--check` |
 | `host.js` | Host 入口与兼容导出 |
@@ -213,6 +241,11 @@ node verify-compat.mjs                # 与已安装 DSH 的槽位/版本兼容
 | `host/declarations.js` | 档位声明扫描、探测与配置合并 |
 | `host/holiday.js` | 峰谷路由与节假日调度 |
 | `host/status.js` | Host 共享日志与诊断状态 |
+| `host/appearance.js` | 图片保存与外观配置接口 |
+| `host/usage-store.js` | zstd 会话聚合与增量读取 |
+| `host/usage-cache.js` | 紧凑持久化计数与校验 |
+| `host/usage-ledger.js` | 独立累计账本 |
+| `host/usage-route.js` | 统计接口与同源请求防护 |
 | `holiday-calendar.js` | 节假日合并、月度刷新、缓存 |
 | `holidays.json` | 离线基线 |
 | `capabilities.json` | 内置能力表 |
@@ -228,7 +261,7 @@ node verify-compat.mjs                # 与已安装 DSH 的槽位/版本兼容
 
 - 改代码或内置能力表：先读 [MAINTENANCE.md](MAINTENANCE.md)
 - 想把仓库传到 GitHub：见 [UPLOAD-TO-GITHUB.md](UPLOAD-TO-GITHUB.md)
-- 提交前请确保五个 `verify-*` 脚本全部通过
+- 提交前请确保七个 `verify-*` 脚本全部通过
 
 ---
 

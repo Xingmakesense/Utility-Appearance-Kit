@@ -1155,11 +1155,1763 @@ const STYLE_TAG_ID = "utility-appearance-kit/inline.css";
                 tag.dataset.pluginCss = STYLE_TAG_ID;
                 document.head.appendChild(tag);
             }
-            const css = [sliderCss, pricingCss].join("\n");
+            const css = [sliderCss, pricingCss, UAK_GLASS_CSS, UAK_SETTINGS_CSS, UAK_STATS_CSS].join("\n");
             if (tag.textContent !== css) tag.textContent = css;
             return () => {
                 if (tag.isConnected) tag.remove();
             };
+        }
+        //#endregion
+
+        //#region client/appearance-data.js
+const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
+        const uakIsEnglish = () => !String(document.documentElement.lang || navigator.language || "zh").toLowerCase().startsWith("zh");
+        const uakTr = (zh, en) => uakIsEnglish() ? en : zh;
+        let uakUiRevision = 0;
+        const uakUiLocaleListeners = new Set();
+        function uakSubscribeUiLocale(listener) {
+            uakUiLocaleListeners.add(listener);
+            return () => uakUiLocaleListeners.delete(listener);
+        }
+        function uakMountUiLocale(ctx) {
+            let previous = uakIsEnglish();
+            const check = () => {
+                const next = uakIsEnglish();
+                if (next === previous) return;
+                previous = next;
+                uakUiRevision += 1;
+                for (const listener of [...uakUiLocaleListeners]) listener(uakUiRevision);
+            };
+            const unsubscribe = typeof ctx?.locale?.subscribe === "function" ? ctx.locale.subscribe(check) : null;
+            const observer = new MutationObserver(check);
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+            return () => { observer.disconnect(); unsubscribe?.(); uakUiLocaleListeners.clear(); };
+        }
+        const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
+        const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
+        const UAK_DEFAULTS = Object.freeze({
+            imageUrl: "", imageMode: "cover", blur: 0, opacity: 0, scale: 0,
+            brightness: 100, contrast: 100, saturate: 100,
+            glassOpacity: 58, glassBlur: 18, popupOpacity: 86,
+            bodyHeight: 360, bookMode: "random", bookTitle: "活着", units: "auto"
+        });
+        const uakClamp = (value, min, max, fallback) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+        };
+        function uakSanitizeSettings(raw) {
+            const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+            return {
+                imageUrl: typeof source.imageUrl === "string" && (/^https?:\/\//i.test(source.imageUrl) || /^\/(skin-master|utility-appearance-kit)\/asset\/[\w.-]+$/.test(source.imageUrl)) ? source.imageUrl.slice(0, 2048) : "",
+                imageMode: ["cover", "contain", "repeat"].includes(source.imageMode) ? source.imageMode : "cover",
+                blur: uakClamp(source.blur, 0, 40, 0),
+                opacity: uakClamp(source.opacity, 0, 100, 0),
+                scale: uakClamp(source.scale, -100, 100, 0),
+                brightness: uakClamp(source.brightness, 50, 150, 100),
+                contrast: uakClamp(source.contrast, 50, 150, 100),
+                saturate: uakClamp(source.saturate, 0, 200, 100),
+                glassOpacity: uakClamp(source.glassOpacity, 20, 95, 58),
+                glassBlur: uakClamp(source.glassBlur, 0, 40, 18),
+                popupOpacity: uakClamp(source.popupOpacity, 40, 100, 86),
+                bodyHeight: Math.round(uakClamp(source.bodyHeight, 300, 560, 360) / 4) * 4,
+                bookMode: source.bookMode === "selected" ? "selected" : "random",
+                bookTitle: typeof source.bookTitle === "string" ? source.bookTitle : "活着",
+                units: ["auto", "short", "myriad"].includes(source.units) ? source.units : "auto"
+            };
+        }
+        let uakSettingsState = uakSanitizeSettings(null);
+        const uakSettingsListeners = new Set();
+        let uakSettingsReady;
+        const uakSettingsStore = {
+            getState: () => uakSettingsState,
+            subscribe(listener) {
+                uakSettingsListeners.add(listener);
+                return () => uakSettingsListeners.delete(listener);
+            },
+            commit(next) {
+                const sanitized = uakSanitizeSettings(next);
+                if (JSON.stringify(sanitized) === JSON.stringify(uakSettingsState)) return uakSettingsState;
+                uakSettingsState = sanitized;
+                try { localStorage.setItem(UAK_SETTINGS_KEY, JSON.stringify(uakSettingsState)); } catch { /* server remains authoritative */ }
+                for (const listener of [...uakSettingsListeners]) {
+                    try { listener(uakSettingsState); } catch { /* one view must not break another */ }
+                }
+                return uakSettingsState;
+            }
+        };
+        function uakLoadSettings() {
+            if (uakSettingsReady) return uakSettingsReady;
+            uakSettingsReady = (async () => {
+                let saved = null;
+                try { saved = JSON.parse(localStorage.getItem(UAK_SETTINGS_KEY) || "null"); } catch { /* ignore malformed local state */ }
+                if (saved && typeof saved === "object") uakSettingsStore.commit(saved);
+                else {
+                    try {
+                        const response = await fetch("/skin-master/settings", { headers: { accept: "application/json" } });
+                    if (!response.ok) throw new Error("legacy settings unavailable");
+                        const legacy = (await response.json())?.value;
+                        if (legacy && typeof legacy === "object") {
+                            uakSettingsStore.commit({
+                                imageUrl: legacy.imageUrl, imageMode: legacy.imageMode,
+                                blur: legacy.blur, opacity: legacy.opacity, scale: legacy.scale,
+                                brightness: legacy.brightness, contrast: legacy.contrast, saturate: legacy.saturate
+                            });
+                        }
+                    } catch { /* defaults are a complete configuration */ }
+                }
+                try {
+                    const response = await fetch(UAK_SETTINGS_PATH, { headers: { accept: "application/json", "x-dsh-uak-settings": "1" } });
+                    const data = await response.json();
+                    if (response.ok && data?.value) uakSettingsStore.commit(data.value);
+                } catch { /* local fallback */ }
+                return uakSettingsState;
+            })();
+            return uakSettingsReady;
+        }
+        async function uakSaveSettings(value) {
+            const next = uakSanitizeSettings(value);
+            const response = await fetch(UAK_SETTINGS_PATH, {
+                method: "POST", headers: { "content-type": "application/json", accept: "application/json", "x-dsh-uak-settings": "1" },
+                body: JSON.stringify(next)
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.ok !== true) throw new Error(result.message || "配置保存失败");
+            return uakSettingsStore.commit(next);
+        }
+        async function uakUploadImage(file) {
+            const name = `${Date.now().toString(36)}-${String(file.name || "wallpaper").replace(/[^A-Za-z0-9._-]/g, "_")}`;
+            const response = await fetch("/utility-appearance-kit/asset?name=" + encodeURIComponent(name), { method: "POST", headers: { "content-type": file.type || "application/octet-stream", "x-dsh-uak-settings": "1" }, body: file });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.url) throw new Error(result.message || "图片保存失败");
+            return result.url;
+        }
+        function uakFetchUsage(options = {}) {
+            return fetch(UAK_USAGE_PATH + (options.force ? "?refresh=1" : ""), {
+                headers: { accept: "application/json", "x-dsh-uak-usage": "1" }
+            }).then((response) => {
+                if (!response.ok) throw new Error(`统计读取失败 (${response.status})`);
+                return response.json();
+            });
+        }
+        //#endregion
+
+        //#region client/appearance.js
+const UAK_GLASS_CSS = `
+html.uak-liquid, html.uak-liquid body { background: transparent; }
+html.uak-liquid body {
+  --dsw-alias-bg-base: rgb(24 31 46 / var(--uak-surface-alpha, .12));
+  --dsw-alias-bg-layer-1: rgb(31 40 57 / var(--uak-surface-alpha, .12));
+  --dsw-alias-bg-layer-2: rgb(37 48 68 / var(--uak-surface-alpha, .12));
+  --dsw-alias-bg-layer-3: rgb(45 58 80 / var(--uak-popup-alpha, .86));
+  --dsw-specific-sidebar-fill: rgb(24 33 49 / var(--uak-surface-alpha, .12));
+  --dsw-alias-bg-module-platform: rgb(59 79 111 / .48);
+}
+#dsk-skin-root { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; background: #101724; }
+#dsk-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
+#dsk-skin-blur { position: absolute; inset: 0; pointer-events: none; }
+.uak-liquid-wash { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 18% 0%, rgb(113 153 220 / .08), transparent 48%),
+              radial-gradient(ellipse at 88% 100%, rgb(92 93 164 / .07), transparent 50%);
+  box-shadow: inset 0 1px rgb(255 255 255 / .05); }
+.uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card], .uak-liquid [data-taskboard],
+.uak-liquid [data-dsh-taskboard], .uak-liquid [data-context-panel],
+.uak-liquid [data-slot="sidebar.settings"] > *, .uak-liquid [data-shell-overlay="true"] [data-slot] > * {
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
+  border-color: rgb(213 229 255 / .13);
+  box-shadow: inset 0 1px rgb(255 255 255 / .06), 0 12px 40px rgb(0 0 0 / .12);
+}
+.uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card] { background-color: rgb(27 38 56 / var(--uak-input-alpha, .4)); }
+.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
+.uak-liquid [role="dialog"], .uak-liquid [role="menu"] {
+  background-color: rgb(32 43 62 / var(--uak-popup-alpha, .86));
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-reduced-motion: reduce) {
+  .uak-liquid [data-composer-card], .uak-liquid [role="dialog"], .uak-liquid [role="menu"] { backdrop-filter: none; }
+}
+.uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card],
+.uak-no-blur [data-shell-overlay="true"] [data-slot] > *, .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"],
+.uak-no-blur .uak-statsFrame, .uak-no-blur .uak-statsBook { backdrop-filter: none; -webkit-backdrop-filter: none; }
+`;
+        let uakLastAppearance = null;
+        function uakApplyAppearance(settings) {
+            if (typeof document === "undefined") return;
+            const cfg = uakSanitizeSettings(settings);
+            const signature = JSON.stringify(cfg);
+            if (signature === uakLastAppearance) return;
+            uakLastAppearance = signature;
+            const root = document.documentElement;
+            root.classList.add("uak-liquid");
+            root.classList.toggle("uak-no-blur", cfg.glassBlur === 0 || cfg.opacity >= 98);
+            let layer = document.getElementById("dsk-skin-root");
+            if (!layer) {
+                layer = document.createElement("div"); layer.id = "dsk-skin-root";
+                const media = document.createElement("div"); media.id = "dsk-skin-media";
+                const blur = document.createElement("div"); blur.id = "dsk-skin-blur";
+                layer.append(media, blur); document.body.prepend(layer);
+            }
+            const media = layer.querySelector("#dsk-skin-media");
+            const blur = layer.querySelector("#dsk-skin-blur");
+            media.textContent = "";
+            media.style.backgroundImage = cfg.imageUrl ? `url("${cfg.imageUrl.replace(/["\\]/g, "\\$&")}")` : "";
+            media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : cfg.imageMode;
+            media.style.backgroundRepeat = cfg.imageMode === "repeat" ? "repeat" : "no-repeat";
+            media.style.filter = `brightness(${cfg.brightness}%) contrast(${cfg.contrast}%) saturate(${cfg.saturate}%)`;
+            media.style.transform = `scale(${Math.max(10, 100 + cfg.scale) / 100})`;
+            blur.style.backdropFilter = cfg.blur > 0 ? `blur(${cfg.blur}px)` : "none";
+            root.style.setProperty("--uak-surface-alpha", String(cfg.opacity / 100));
+            root.style.setProperty("--uak-input-alpha", ".4");
+            root.style.setProperty("--uak-glass-blur", `${cfg.glassBlur}px`);
+            root.style.setProperty("--uak-popup-alpha", String(cfg.popupOpacity / 100));
+            root.style.setProperty("--uak-card-alpha", String(cfg.glassOpacity / 100));
+            root.style.setProperty("--uak-stats-height", `${cfg.bodyHeight}px`);
+            if (!document.querySelector(".uak-liquid-wash")) {
+                const wash = document.createElement("div"); wash.className = "uak-liquid-wash";
+                wash.setAttribute("aria-hidden", "true"); document.body.append(wash);
+            }
+        }
+        function uakMarkGlassSurfaces(root = document) {
+            if (typeof document === "undefined") return;
+            const candidates = [];
+            if (root.nodeType === 1 && root.matches('[data-lexical-editor="true"],textarea')) candidates.push(root);
+            if (typeof root.querySelectorAll === "function") candidates.push(...root.querySelectorAll('[data-lexical-editor="true"],textarea'));
+            for (const editor of candidates) {
+                let node = editor.parentElement;
+                while (node && node !== document.body) {
+                    if (/card/i.test(String(node.className))) {
+                        if (node.dataset.uakGlassCard !== "true") node.dataset.uakGlassCard = "true";
+                        break;
+                    }
+                    node = node.parentElement;
+                }
+            }
+        }
+        function uakMountAppearance() {
+            uakApplyAppearance(uakSettingsStore.getState());
+            uakMarkGlassSurfaces();
+            let timer = null;
+            const observer = typeof MutationObserver === "function" ? new MutationObserver((records) => {
+                const added = records.some((record) => record.addedNodes.length > 0);
+                if (!added || timer !== null) return;
+                timer = setTimeout(() => {
+                    timer = null;
+                    for (const record of records) {
+                        for (const node of record.addedNodes) {
+                            if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+                        }
+                    }
+                }, 80);
+            }) : null;
+            observer?.observe(document.body, { childList: true, subtree: true });
+            void uakLoadSettings().then(uakApplyAppearance);
+            const unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+            return () => { observer?.disconnect(); if (timer !== null) clearTimeout(timer); unsubscribe(); };
+        }
+        function uakIsSessionLogDialog(element) {
+            if (!element || element.closest(".uak-settings")) return false;
+            const text = String(element.textContent || "").replace(/\s+/g, " ").trim();
+            const title = element.querySelector('[role="heading"],h1,h2,h3');
+            const label = `${element.getAttribute("aria-label") || ""} ${title?.textContent || ""}`;
+            if (!/(session\s*log|会话日志|session日志)/i.test(label) || !/(download|下载|export|导出)/i.test(label)) return false;
+            return /(session\s*log|会话日志|session日志)/i.test(text) && /(download|下载|export|导出)/i.test(text);
+        }
+        function uakMountSessionLogDismissal() {
+            if (typeof document === "undefined") return () => {};
+            const timers = new Set();
+            const inspect = (dialog) => {
+                if (dialog.dataset.uakLogClosing || !uakIsSessionLogDialog(dialog)) return;
+                dialog.dataset.uakLogClosing = "true";
+                const timer = setTimeout(() => {
+                    timers.delete(timer);
+                    if (!dialog.isConnected) return;
+                    const buttons = [...dialog.querySelectorAll("button")];
+                    const close = buttons.find((button) => {
+                        const label = `${button.getAttribute("aria-label") || ""} ${button.textContent || ""}`;
+                        return /close|关闭|cancel|取消|dismiss|知道了/i.test(label) && !/download|下载|export|导出|confirm|确认/i.test(label);
+                    });
+                    if (close) close.click();
+                    else dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }));
+                    delete dialog.dataset.uakLogClosing;
+                }, 2000);
+                timers.add(timer);
+            };
+            const scanAddedNode = (node) => {
+                if (node.nodeType !== 1) return;
+                if (node.matches('[role="dialog"],[data-shell-overlay="true"] [data-slot] > *')) inspect(node);
+                for (const dialog of node.querySelectorAll('[role="dialog"],[data-shell-overlay="true"] [data-slot] > *')) inspect(dialog);
+            };
+            const observer = new MutationObserver((records) => {
+                for (const record of records) {
+                    if (record.addedNodes.length === 0) continue;
+                    for (const node of record.addedNodes) scanAddedNode(node);
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+            scanAddedNode(document.body);
+            return () => { observer.disconnect(); for (const timer of timers) clearTimeout(timer); timers.clear(); };
+        }
+        //#endregion
+
+        //#region client/settings-styles.js
+const UAK_SETTINGS_CSS = `
+.uak-settings { color: var(--dsw-alias-label-primary); padding: 0 0 28px; }
+.uak-settings-intro, .uak-settings-section > p { color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; }
+.uak-settings-section { padding: 16px 0; border-bottom: .5px solid var(--dsw-alias-border-l2); }
+.uak-settings-section h2 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
+.uak-setting-url { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
+.uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: inherit; background: rgb(125 160 220 / .08); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; font: inherit; font-size: 12px; }
+.uak-setting-choice { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 12px 0; }
+.uak-setting-choice > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.uak-setting-options { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+.uak-chip { padding: 5px 11px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; font-size: 12px; }
+.uak-chip:hover { background: rgb(108 150 229 / .1); color: var(--dsw-alias-label-primary); }
+.uak-chip[data-active="true"] { background: rgb(88 137 230 / .18); border-color: rgb(139 177 255 / .22); color: #bcd4ff; }
+.uak-setting-sliders { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 24px; }
+.uak-setting-slider { display: grid; grid-template-columns: 100px minmax(80px,1fr) 50px; gap: 10px; align-items: center; min-height: 36px; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.uak-setting-slider input { width: 100%; accent-color: #689fff; }
+.uak-setting-slider output { color: var(--dsw-alias-label-tertiary); text-align: right; font-variant-numeric: tabular-nums; }
+.uak-book-catalog { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin: 14px 0 20px; }
+.uak-book-option { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid rgb(148 177 232 / .12); border-radius: 9px; background: rgb(67 106 179 / .07); color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; }
+.uak-book-option strong { font-size: 12px; font-weight: 500; }
+.uak-book-option span { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.uak-book-option[data-active="true"] { background: rgb(61 125 235 / .2); border-color: rgb(131 176 255 / .45); color: #d5e4ff; }
+.uak-book-option[aria-selected="true"] { box-shadow: inset 0 0 0 1px rgb(131 176 255 / .2); }
+.uak-save { display: block; width: 100%; padding: 10px 16px; border: 1px solid rgb(152 190 255 / .35); border-radius: 9px; background: #356fca; color: #fff; cursor: pointer; font: inherit; }
+.uak-save:hover { background: #427ddb; }
+.uak-save:disabled { opacity: .55; cursor: default; }
+.uak-save-message { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
+@media (max-width:650px) { .uak-setting-sliders { grid-template-columns: 1fr; } .uak-book-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); } .uak-setting-choice { align-items: flex-start; } }
+`;
+        //#endregion
+
+        //#region client/statistics-i18n.js
+// User-facing statistics copy. Every zh/en pair for the panel lives
+        // here so statistics.js and statistics-ui.js never accumulate inline
+        // bilingual literals. This file shares the client factory scope (no
+        // import/export), so each identifier keeps the unique uak prefix.
+        //
+        // uakStatsT(key, params) is the only accessor:
+        //  - a string value is returned as-is for the active language;
+        //  - `{name}` placeholders are replaced from params;
+        //  - a param whose value is `{ zh, en }` is resolved to the active
+        //    language, which keeps one template valid for both locales even
+        //    when the surrounding sentence needs a different phrase order;
+        //  - an array value (e.g. weekday labels) is returned unchanged.
+        const UAK_STATS_DICTIONARY = Object.freeze({
+            zh: Object.freeze({
+                "stats.section": "使用统计",
+                "stats.prevYear": "上一个有数据年份",
+                "stats.nextYear": "下一个有数据年份",
+                "stats.year": "{year} 年",
+                "stats.monthOverview": "{month} 月使用概览",
+                "stats.monthHint": "月份选择（切换后回到月视图）",
+                "stats.rangeGroup": "统计范围",
+                "stats.range.month": "月度",
+                "stats.range.all": "全部",
+                "stats.range.30d": "30天",
+                "stats.range.7d": "7天",
+                "stats.monthsGroup": "选择月份，可点击或拖动",
+                "stats.monthAria": "{year} 年 {month} 月",
+                "stats.monthAriaEmpty": "{year} 年 {month} 月，无数据",
+                "stats.narrative.month": "{year} 年 {month} 月",
+                "stats.narrative.all": "全部时间",
+                "stats.narrative.30d": "最近 30 天",
+                "stats.narrative.7d": "最近 7 天",
+                "stats.tabs": "统计内容",
+                "stats.tab.overview": "总览",
+                "stats.tab.models": "模型",
+                "stats.loading": "正在读取使用统计…",
+                "stats.error": "暂时无法读取使用统计。",
+                "stats.retry": "重试",
+                "stats.invalidResponse": "统计响应格式无效",
+                "stats.noMonth": "{range}暂无使用记录",
+                "stats.noMonthHint": "该月份仍可选择，切换到其他范围可查看已有统计。",
+                "stats.empty": "{range}暂无活动",
+                "stats.emptyHint": "完成一次会话后，这里会显示用量与书籍对照。",
+                "stats.modelTable.model": "模型",
+                "stats.modelTable.messages": "消息数",
+                "stats.noModels": "{range}暂无模型用量",
+                "stats.heatTitle": "{year} 年 {month} 月 · 每日 Token",
+                "stats.heatAria": "{year} 年 {month} 月每日 Token 热力图",
+                "stats.heatNone": "无消耗",
+                "stats.heatLegendAria": "每日 Token 五档图例",
+                "stats.cellTitle": "{date} · {tokens} Token · {messages} 条消息",
+                "stats.weekdays": ["一", "二", "三", "四", "五", "六", "日"],
+                "stats.bookSection": "书籍对照",
+                "stats.bookEmpty": "请在设置页选择一本书。",
+                "stats.bookRandom": "随机书籍",
+                "stats.bookSelected": "我的书籍",
+                "stats.bookTitle": "《{title}》",
+                "stats.bookDescription": "《{title}》约{chars}字 · {tier}，你{period}约使用 {tokens} Token，约相当于 {equivalent} 本。",
+                "stats.bookRatio": "约 {percent}% 本书的字数对照",
+                "stats.period.month": "本月",
+                "stats.period.all": "累计",
+                "stats.period.30d": "近30天",
+                "stats.period.7d": "近7天",
+                "stats.metric.sessions": "会话数",
+                "stats.metric.messages": "消息数",
+                "stats.metric.tokens": "总 Token",
+                "stats.metric.activeDays": "活跃天数",
+                "stats.metric.peakHour": "高峰时段",
+                "stats.metric.favoriteModel": "常用模型",
+                "stats.tier.short": "短章",
+                "stats.tier.medium": "中构",
+                "stats.tier.epic": "鸿篇"
+            }),
+            en: Object.freeze({
+                "stats.section": "Usage statistics",
+                "stats.prevYear": "Previous year with activity",
+                "stats.nextYear": "Next year with activity",
+                "stats.year": "{year}",
+                "stats.monthOverview": "Month {month} overview",
+                "stats.monthHint": "Choose a month to return to the monthly view",
+                "stats.rangeGroup": "Statistics range",
+                "stats.range.month": "Month",
+                "stats.range.all": "All",
+                "stats.range.30d": "30 days",
+                "stats.range.7d": "7 days",
+                "stats.monthsGroup": "Select a month by clicking or dragging",
+                "stats.monthAria": "{year}-{month}",
+                "stats.monthAriaEmpty": "{year}-{month}, no activity",
+                "stats.narrative.month": "{year}-{month}",
+                "stats.narrative.all": "All time",
+                "stats.narrative.30d": "Last 30 days",
+                "stats.narrative.7d": "Last 7 days",
+                "stats.tabs": "Statistics content",
+                "stats.tab.overview": "Overview",
+                "stats.tab.models": "Models",
+                "stats.loading": "Loading usage statistics…",
+                "stats.error": "Usage statistics are unavailable.",
+                "stats.retry": "Retry",
+                "stats.invalidResponse": "Invalid statistics response",
+                "stats.noMonth": "No activity in {range}",
+                "stats.noMonthHint": "This month stays selected. Choose another range to view existing statistics.",
+                "stats.empty": "No activity for {range}",
+                "stats.emptyHint": "Finish a session to see usage and book comparisons here.",
+                "stats.modelTable.model": "Model",
+                "stats.modelTable.messages": "Messages",
+                "stats.noModels": "No model usage for {range}",
+                "stats.heatTitle": "{year}-{month} · Daily tokens",
+                "stats.heatAria": "Daily token heatmap for {year}-{month}",
+                "stats.heatNone": "No activity",
+                "stats.heatLegendAria": "Five daily token levels",
+                "stats.cellTitle": "{date} · {tokens} tokens · {messages} messages",
+                "stats.weekdays": ["M", "T", "W", "T", "F", "S", "S"],
+                "stats.bookSection": "Book comparison",
+                "stats.bookEmpty": "Select a book in settings.",
+                "stats.bookRandom": "Random book",
+                "stats.bookSelected": "Selected book",
+                "stats.bookTitle": "{title}",
+                "stats.bookDescription": "{title} · {tier} · ≈{chars} characters. Your {period} usage of {tokens} tokens is about {equivalent} copies.",
+                "stats.bookRatio": "Approximately {percent}% of one copy",
+                "stats.period.month": "this month",
+                "stats.period.all": "all-time",
+                "stats.period.30d": "last 30 days",
+                "stats.period.7d": "last 7 days",
+                "stats.metric.sessions": "Sessions",
+                "stats.metric.messages": "Messages",
+                "stats.metric.tokens": "Total tokens",
+                "stats.metric.activeDays": "Active days",
+                "stats.metric.peakHour": "Peak hour",
+                "stats.metric.favoriteModel": "Favorite model",
+                "stats.tier.short": "Short",
+                "stats.tier.medium": "Medium",
+                "stats.tier.epic": "Epic"
+            })
+        });
+
+        // A `{ zh, en }` param follows the active language; everything else is
+        // used verbatim so numbers, dates and preformatted strings just work.
+        const uakStatsLocaleValue = (value) => {
+            if (value === null || typeof value !== "object" || Array.isArray(value)) return value;
+            if (!("zh" in value) && !("en" in value)) return value;
+            return uakIsEnglish() ? (value.en ?? value.zh) : (value.zh ?? value.en);
+        };
+
+        function uakStatsT(key, params) {
+            if (typeof key !== "string" || key.length === 0) return "";
+            const table = uakIsEnglish() ? UAK_STATS_DICTIONARY.en : UAK_STATS_DICTIONARY.zh;
+            const template = table[key] ?? UAK_STATS_DICTIONARY.zh[key];
+            if (template === undefined) return key;
+            if (typeof template !== "string") return template;
+            if (params === null || typeof params !== "object") return template;
+            return template.replace(/\{([A-Za-z0-9_]+)\}/g, (placeholder, name) => {
+                const value = uakStatsLocaleValue(params[name]);
+                return value === undefined || value === null ? placeholder : String(value);
+            });
+        }
+
+        // Range ids are UI state ("month" | "all" | "30d" | "7d") and the
+        // dictionary serves two shapes: the short tab label and the full
+        // sentence fragment ("November 2026" vs "Last 30 days").
+        // The zh sentences keep the raw month ("11 月"), the en ones pad it
+        // ("2026-11"); this bilingual param keeps one template valid for both.
+        const uakStatsMonthParam = (month) => ({ zh: month, en: String(month).padStart(2, "0") });
+
+        const uakStatsRangeLabel = (range) => uakStatsT(`stats.range.${range}`);
+
+        const uakStatsRangeNarrative = (range, year, month) => uakStatsT(`stats.narrative.${range}`, {
+            year,
+            month: uakStatsMonthParam(month)
+        });
+
+        // `{ period }` needs a different phrase per language, so the param is
+        // handed over as a bilingual pair for uakStatsT to resolve.
+        const uakStatsPeriodParam = (range) => {
+            const period = range === "month" ? "month" : range === "all" ? "all" : range === "30d" ? "30d" : "7d";
+            return {
+                zh: UAK_STATS_DICTIONARY.zh[`stats.period.${period}`],
+                en: UAK_STATS_DICTIONARY.en[`stats.period.${period}`]
+            };
+        };
+        //#endregion
+
+        //#region client/books.js
+// Book catalog for the monthly statistics panel. Pure data plus the
+        // catalog lookup/comparison helpers, so statistics.js keeps only the
+        // usage math. This file shares the client factory scope (no
+        // import/export); every identifier keeps the unique uak prefix.
+        const uakBooks = Object.freeze([
+            { title: "红楼梦", englishTitle: "Dream of the Red Chamber", chars: 730000 },
+            { title: "三国演义", englishTitle: "Romance of the Three Kingdoms", chars: 630000 },
+            { title: "围城", englishTitle: "Fortress Besieged", chars: 230000 },
+            { title: "活着", englishTitle: "To Live", chars: 120000 },
+            { title: "骆驼祥子", englishTitle: "Rickshaw Boy", chars: 100000 },
+            { title: "我的大学", englishTitle: "My Universities", chars: 150000 },
+            { title: "平凡的世界", englishTitle: "Ordinary World", chars: 1000000 },
+            { title: "白鹿原", englishTitle: "White Deer Plain", chars: 500000 },
+            { title: "一句顶一万句", englishTitle: "Someone to Talk To", chars: 300000 },
+            { title: "穷人", englishTitle: "Poor Folk", chars: 150000 },
+            { title: "悲惨世界", englishTitle: "Les Misérables", chars: 900000 },
+            { title: "鼠疫", englishTitle: "The Plague", chars: 200000 },
+            { title: "理想国", englishTitle: "The Republic", chars: 300000 },
+            { title: "许三观卖血记", englishTitle: "Chronicle of a Blood Merchant", chars: 120000 },
+            { title: "局外人", englishTitle: "The Outsider", chars: 60000 },
+            { title: "老人与海", englishTitle: "The Old Man and the Sea", chars: 40000 },
+            { title: "变形记", englishTitle: "The Metamorphosis", chars: 30000 },
+            { title: "谈谈方法", englishTitle: "Discourse on the Method", chars: 50000 },
+            { title: "西西弗神话", englishTitle: "The Myth of Sisyphus", chars: 80000 },
+            { title: "乌合之众", englishTitle: "The Crowd", chars: 180000 }
+        ].map((book) => Object.freeze({
+            ...book,
+            tier: book.chars < 50000 ? "短章" : book.chars < 300000 ? "中构" : "鸿篇"
+        })));
+        const uakBookCatalog = uakBooks;
+
+        // Tier labels stay Chinese in the data (settings-page.js compares the
+        // raw value); only the rendered label is localized here.
+        const uakBookTier = (book) => uakStatsT(
+            book?.tier === "短章" ? "stats.tier.short"
+                : book?.tier === "中构" ? "stats.tier.medium" : "stats.tier.epic"
+        );
+
+        function uakBookByTitle(title) {
+            if (typeof title !== "string") return undefined;
+            const normalized = title.trim().replace(/^《|》$/g, "");
+            return uakBooks.find((book) => book.title === normalized || book.englishTitle === normalized);
+        }
+
+        function uakBookStats(book, tokens) {
+            const selected = typeof book === "string" ? uakBookByTitle(book) : book;
+            if (selected === undefined || selected === null) return null;
+            const safeTokens = uakFiniteCount(tokens);
+            return {
+                ...selected,
+                tokens: safeTokens,
+                equivalent: safeTokens / selected.chars,
+                percent: safeTokens / selected.chars * 100
+            };
+        }
+        //#endregion
+
+        //#region client/statistics.js
+// Pure usage/calendar calculations. Books live in client/books.js and
+        // user-facing copy in client/statistics-i18n.js, so this file holds the
+        // statistics math only. This file shares the client factory scope, so
+        // every public constant has a unique uak prefix.
+        const uakUsageFirstMonthThresholds = Object.freeze([
+            20000,
+            100000,
+            500000,
+            1000000
+        ]);
+
+        const uakUsageNeutralColor = "var(--dsw-alias-fill-secondary, #e8edf3)";
+        const uakUsageHeatColors = Object.freeze([
+            uakUsageNeutralColor,
+            "#dbeafe",
+            "#93c5fd",
+            "#60a5fa",
+            "#2563eb",
+            "#1e3a8a"
+        ]);
+
+        function uakClampMonth(month) {
+            const value = Number.isFinite(Number(month)) ? Math.trunc(Number(month)) : 1;
+            return Math.min(12, Math.max(1, value));
+        }
+
+        function uakClampYear(year, minimum = 1970, maximum = 9999) {
+            const value = Number.isFinite(Number(year)) ? Math.trunc(Number(year)) : minimum;
+            return Math.min(maximum, Math.max(minimum, value));
+        }
+
+        function uakDayKey(year, month, day) {
+            return `${uakClampYear(year)}-${String(uakClampMonth(month)).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        }
+
+        function uakIsDayKey(value) {
+            if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+            const year = Number(value.slice(0, 4));
+            const month = Number(value.slice(5, 7));
+            const day = Number(value.slice(8, 10));
+            if (month < 1 || month > 12 || day < 1) return false;
+            const date = new Date(Date.UTC(year, month - 1, day));
+            return date.getUTCFullYear() === year
+                && date.getUTCMonth() === month - 1
+                && date.getUTCDate() === day;
+        }
+
+        function uakFiniteCount(value) {
+            const number = typeof value === "number" ? value : Number(value);
+            return Number.isFinite(number) && number > 0 ? number : 0;
+        }
+
+        function uakEmptyDay() {
+            return { tokens: 0, messages: 0, hours: Array(24).fill(0), messageHours: Array(24).fill(0), models: {} };
+        }
+
+        function uakNormalizeDay(value) {
+            const source = value !== null && typeof value === "object" ? value : {};
+            const models = {};
+            const rawModels = source.models !== null && typeof source.models === "object"
+                ? source.models : {};
+            for (const [id, model] of Object.entries(rawModels)) {
+                if (model === null || typeof model !== "object") continue;
+                models[id] = {
+                    tokens: uakFiniteCount(model.tokens),
+                    messages: uakFiniteCount(model.messages)
+                };
+            }
+            const hours = Array.from({ length: 24 }, (_, index) => uakFiniteCount(source.hours?.[index]));
+            const messageHours = Array.from({ length: 24 }, (_, index) => uakFiniteCount(source.messageHours?.[index]));
+            return {
+                tokens: uakFiniteCount(source.tokens),
+                messages: uakFiniteCount(source.messages),
+                hours,
+                messageHours,
+                models
+            };
+        }
+
+        function uakPerDayEntries(summary) {
+            if (summary === null || typeof summary !== "object"
+                || summary.perDay === null || typeof summary.perDay !== "object") return [];
+            return Object.entries(summary.perDay)
+                .filter(([date]) => uakIsDayKey(date))
+                .sort(([left], [right]) => left.localeCompare(right));
+        }
+
+        function uakMergeUsage(target, source) {
+            target.tokens += uakFiniteCount(source?.tokens);
+            target.messages += uakFiniteCount(source?.messages);
+            for (let index = 0; index < 24; index += 1) {
+                target.hours[index] += uakFiniteCount(source?.hours?.[index]);
+                target.messageHours[index] += uakFiniteCount(source?.messageHours?.[index]);
+            }
+            const models = source?.models !== null && typeof source?.models === "object" ? source.models : {};
+            for (const [id, model] of Object.entries(models)) {
+                if (target.models[id] === undefined) target.models[id] = { id, tokens: 0, messages: 0 };
+                target.models[id].tokens += uakFiniteCount(model?.tokens);
+                target.models[id].messages += uakFiniteCount(model?.messages);
+            }
+            return target;
+        }
+
+        function uakNewUsage() {
+            return { tokens: 0, messages: 0, hours: Array(24).fill(0), messageHours: Array(24).fill(0), models: {} };
+        }
+
+        function uakFinalizeUsage(usage) {
+            return {
+                tokens: usage.tokens,
+                messages: usage.messages,
+                hours: usage.hours,
+                messageHours: usage.messageHours,
+                models: Object.values(usage.models).sort((left, right) => right.tokens - left.tokens
+                    || left.id.localeCompare(right.id))
+            };
+        }
+
+        function uakAddModelTotal(target, id, tokens, messages) {
+            if (target[id] === undefined) target[id] = { id, tokens: 0, messages: 0 };
+            target[id].tokens += uakFiniteCount(tokens);
+            target[id].messages += uakFiniteCount(messages);
+        }
+
+        function uakUsageMetrics(usage, sessions, activeDays, messageHours = usage.messageHours ?? Array(24).fill(0)) {
+            let peakHour = 0;
+            for (let index = 1; index < 24; index += 1) {
+                if (messageHours[index] > messageHours[peakHour]) peakHour = index;
+            }
+            const favoriteModel = usage.models.length > 0 ? usage.models[0].id : "—";
+            return [
+                { id: "sessions", label: uakStatsT("stats.metric.sessions"), value: sessions, format: "number" },
+                { id: "messages", label: uakStatsT("stats.metric.messages"), value: usage.messages, format: "number" },
+                { id: "tokens", label: uakStatsT("stats.metric.tokens"), value: usage.tokens, format: "number" },
+                { id: "activeDays", label: uakStatsT("stats.metric.activeDays"), value: activeDays, format: "number" },
+                { id: "peakHour", label: uakStatsT("stats.metric.peakHour"), value: messageHours.some((value) => value > 0) ? `${String(peakHour).padStart(2, "0")}:00` : "—", format: "text" },
+                { id: "favoriteModel", label: uakStatsT("stats.metric.favoriteModel"), value: favoriteModel, format: "text" }
+            ];
+        }
+
+        // The six headline metrics are shared by month and range views.
+        function uakSummarizeMonth(summary, year, month) {
+            const normalizedYear = uakClampYear(year);
+            const normalizedMonth = uakClampMonth(month);
+            const prefix = `${normalizedYear}-${String(normalizedMonth).padStart(2, "0")}-`;
+            const usage = uakNewUsage();
+            const sessions = new Set();
+            const perDay = {};
+            for (const [date, raw] of uakPerDayEntries(summary)) {
+                if (!date.startsWith(prefix)) continue;
+                const day = uakNormalizeDay(raw);
+                perDay[date] = day;
+                uakMergeUsage(usage, day);
+                const count = uakFiniteCount(summary.sessionsByDay?.[date]);
+                for (let index = 0; index < count; index += 1) sessions.add(`${date}:${index}`);
+            }
+            const finalized = uakFinalizeUsage(usage);
+            const days = Object.entries(perDay).sort(([left], [right]) => left.localeCompare(right));
+            const activeDays = days.filter(([, day]) => day.tokens > 0 || day.messages > 0).length;
+            const peakEntry = days.reduce((peak, entry) => peak === null || entry[1].tokens > peak[1].tokens
+                ? entry : peak, null);
+            const activeHours = finalized.hours.filter((value) => value > 0).length;
+            let peakHour = 0;
+            for (let index = 1; index < 24; index += 1) {
+                if (finalized.messageHours[index] > finalized.messageHours[peakHour]) peakHour = index;
+            }
+            const favoriteModel = finalized.models.length > 0 ? finalized.models[0].id : null;
+            return {
+                year: normalizedYear,
+                month: normalizedMonth,
+                tokens: finalized.tokens,
+                messages: finalized.messages,
+                sessions: sessions.size,
+                activeDays,
+                activeHours,
+                peakHour,
+                favoriteModel,
+                peakDay: peakEntry === null ? null : peakEntry[0],
+                peakDayTokens: peakEntry === null ? 0 : peakEntry[1].tokens,
+                metrics: uakUsageMetrics(finalized, sessions.size, activeDays, finalized.messageHours),
+                models: finalized.models,
+                perDay
+            };
+        }
+
+        function uakDayCells(summary, year, month) {
+            const normalizedYear = uakClampYear(year);
+            const normalizedMonth = uakClampMonth(month);
+            const count = new Date(Date.UTC(normalizedYear, normalizedMonth, 0)).getUTCDate();
+            // Monday-first, like the weekday labels in the panel.
+            const offset = (new Date(Date.UTC(normalizedYear, normalizedMonth - 1, 1)).getUTCDay() + 6) % 7;
+            const cells = Array.from({ length: offset }, (_, index) => ({
+                key: `blank-${index}`, date: null, blank: true, tokens: 0, messages: 0
+            }));
+            for (let day = 1; day <= count; day += 1) {
+                const date = uakDayKey(normalizedYear, normalizedMonth, day);
+                const raw = summary?.perDay?.[date];
+                const normalized = uakNormalizeDay(raw);
+                cells.push({
+                    key: date,
+                    date,
+                    day,
+                    blank: false,
+                    tokens: normalized.tokens,
+                    messages: normalized.messages,
+                    hours: normalized.hours,
+                    models: normalized.models
+                });
+            }
+            return cells;
+        }
+
+        function uakPositiveTokenHistory(summary, beforeDate) {
+            return uakPerDayEntries(summary)
+                .filter(([date]) => beforeDate === undefined || date < beforeDate)
+                .map(([, day]) => uakFiniteCount(day?.tokens))
+                .filter((tokens) => tokens > 0)
+                .sort((left, right) => left - right);
+        }
+
+        function uakHeatThresholds(summary, year, month) {
+            const normalizedYear = uakClampYear(year);
+            const normalizedMonth = uakClampMonth(month);
+            const prefix = `${normalizedYear}-${String(normalizedMonth).padStart(2, "0")}`;
+            const firstMonth = uakIsDayKey(summary?.firstDay)
+                ? summary.firstDay.slice(0, 7)
+                : uakPerDayEntries(summary).find(([, day]) => uakFiniteCount(day?.tokens) > 0)?.[0]?.slice(0, 7) ?? prefix;
+            if (firstMonth === prefix) return [...uakUsageFirstMonthThresholds];
+            const history = uakPositiveTokenHistory(summary);
+            if (history.length === 0) return [...uakUsageFirstMonthThresholds];
+            const p60 = Math.max(1, Math.ceil(history[Math.ceil(0.6 * history.length) - 1]));
+            const thresholds = [];
+            for (let index = 1; index <= 4; index += 1) {
+                const previous = thresholds.length === 0 ? 0 : thresholds[thresholds.length - 1];
+                thresholds.push(Math.max(previous + 1, Math.ceil(p60 * index / 4)));
+            }
+            return thresholds;
+        }
+
+        function uakHeatLevel(tokens, thresholds) {
+            if (!(tokens > 0)) return 0;
+            for (let index = 0; index < thresholds.length; index += 1) {
+                if (tokens <= thresholds[index]) return index + 1;
+            }
+            return 5;
+        }
+
+        function uakFormatThreshold(value, units) {
+            if (units === "auto") units = uakIsEnglish() ? "short" : "myriad";
+            if (units === "short" && value >= 1000) {
+                const number = value / 1000;
+                return `${Number(number.toFixed(number >= 100 ? 0 : 1))}k`;
+            }
+            if (units === "myriad" && value >= 10000) {
+                const number = value / 10000;
+                return `${Number(number.toFixed(number >= 100 ? 0 : 1))}万`;
+            }
+            return String(value);
+        }
+
+        function uakMonthHeatmap(summary, year, month, units = "auto") {
+            const thresholds = uakHeatThresholds(summary, year, month);
+            const cells = uakDayCells(summary, year, month);
+            const levels = cells.map((cell) => cell.blank ? null : uakHeatLevel(cell.tokens, thresholds));
+            const labels = [uakStatsT("stats.heatNone")];
+            let lower = 0;
+            for (let index = 0; index < thresholds.length; index += 1) {
+                const upper = thresholds[index];
+                labels.push(`${uakFormatThreshold(lower + 1, units)}–${uakFormatThreshold(upper, units)}`);
+                lower = upper;
+            }
+            labels.push(`>${uakFormatThreshold(lower, units)}`);
+            return {
+                thresholds,
+                levels,
+                legends: labels.map((label, level) => ({
+                    level,
+                    label,
+                    color: uakUsageHeatColors[level]
+                }))
+            };
+        }
+
+        function uakFormatNumber(value, units = "auto") {
+            if (units === "auto") units = uakIsEnglish() ? "short" : "myriad";
+            const number = Number.isFinite(Number(value)) ? Number(value) : 0;
+            const absolute = Math.abs(number);
+            const sign = number < 0 ? "-" : "";
+            if (units === "short") {
+                if (absolute >= 1000000000) return `${sign}${Number((absolute / 1000000000).toFixed(1))}B`;
+                if (absolute >= 1000000) return `${sign}${Number((absolute / 1000000).toFixed(1))}M`;
+                if (absolute >= 1000) return `${sign}${Number((absolute / 1000).toFixed(1))}k`;
+            }
+            if (units === "myriad") {
+                if (absolute >= 100000000) return `${sign}${Number((absolute / 100000000).toFixed(1))}亿`;
+                if (absolute >= 10000) return `${sign}${Number((absolute / 10000).toFixed(1))}万`;
+            }
+            return number.toLocaleString(uakIsEnglish() ? "en-US" : "zh-CN", Number.isInteger(number) ? {} : { maximumFractionDigits: 2 });
+        }
+
+        function uakTodayKey(date = new Date()) {
+            const value = date instanceof Date ? date : new Date(date);
+            if (!Number.isFinite(value.getTime())) return null;
+            return uakDayKey(value.getFullYear(), value.getMonth() + 1, value.getDate());
+        }
+
+        function uakAvailableYears(summary) {
+            const years = [...new Set(uakPerDayEntries(summary).map(([date]) => Number(date.slice(0, 4))))];
+            return years.sort((left, right) => left - right);
+        }
+
+        // Non-month views never reuse the monthly headline summary. When the
+        // Host has no all-time aggregate, perDay supplies the complete fallback.
+        function uakSummarizeRange(summary, range = "month", year, month, now = new Date()) {
+            if (range === "month") return uakSummarizeMonth(summary, year, month);
+            const allTime = summary?.allTime ?? summary?.total ?? summary?.overall;
+            const today = uakTodayKey(now);
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (range === "30d") start.setDate(start.getDate() - 29);
+            if (range === "7d") start.setDate(start.getDate() - 6);
+            const since = uakDayKey(start.getFullYear(), start.getMonth() + 1, start.getDate());
+            const usage = uakNewUsage();
+            let activeDays = 0;
+            let peakDay = null;
+            let peakDayTokens = 0;
+            let sessions = 0;
+            if (range === "all" && allTime !== null && typeof allTime === "object") {
+                usage.tokens = uakFiniteCount(allTime.tokens);
+                usage.messages = uakFiniteCount(allTime.messages);
+                sessions = uakFiniteCount(allTime.sessions);
+                for (let index = 0; index < 24; index += 1) {
+                    usage.hours[index] = uakFiniteCount(allTime.hours?.[index]);
+                    usage.messageHours[index] = uakFiniteCount(allTime.messageHours?.[index]);
+                }
+                for (const [id, model] of Object.entries(allTime.models ?? {})) {
+                    uakAddModelTotal(usage.models, id, model?.tokens, model?.messages);
+                }
+            }
+            for (const [date, raw] of uakPerDayEntries(summary)) {
+                if (range !== "all" && (today === null || date < since || date > today)) continue;
+                const day = uakNormalizeDay(raw);
+                if (day.tokens > 0 || day.messages > 0) activeDays += 1;
+                if (day.tokens > peakDayTokens) {
+                    peakDay = date;
+                    peakDayTokens = day.tokens;
+                }
+                sessions += uakFiniteCount(summary.sessionsByDay?.[date]);
+                // All-time totals are authoritative, but daily model rows fill
+                // in any breakdown omitted by the Host's aggregate.
+                if (range !== "all" || allTime === null || typeof allTime !== "object") {
+                    uakMergeUsage(usage, day);
+                } else if (allTime.models === undefined) {
+                    for (const [id, model] of Object.entries(day.models)) {
+                        uakAddModelTotal(usage.models, id, model.tokens, model.messages);
+                    }
+                }
+            }
+            const finalized = uakFinalizeUsage(usage);
+            const activeHours = finalized.hours.filter((value) => value > 0).length;
+            let peakHour = 0;
+            for (let index = 1; index < 24; index += 1) {
+                if (finalized.messageHours[index] > finalized.messageHours[peakHour]) peakHour = index;
+            }
+            const favoriteModel = finalized.models.length > 0 ? finalized.models[0].id : null;
+            return {
+                range,
+                tokens: finalized.tokens,
+                messages: finalized.messages,
+                sessions,
+                activeDays,
+                activeHours,
+                peakHour,
+                favoriteModel,
+                peakDay,
+                peakDayTokens,
+                metrics: uakUsageMetrics(finalized, sessions, activeDays, finalized.messageHours),
+                models: finalized.models
+            };
+        }
+        //#endregion
+
+        //#region client/statistics-views.js
+// Stateless presentation for the usage panel: the stylesheet plus
+        // element builders. Nothing here fetches, stores, or schedules work.
+        // Every interactive value arrives as a prop or callback, so
+        // statistics-ui.js keeps state/interaction and this file keeps markup.
+        // No import/export: this file shares the client factory scope.
+        const UAK_STATS_CSS = `
+.uak-stats {
+    box-sizing: border-box;
+    width: calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
+    max-width: var(--dsh-composer-card-max-width, 100%);
+    margin: 0 auto 10px;
+    color: var(--dsw-alias-label-primary, #172033);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.uak-stats *, .uak-stats *::before, .uak-stats *::after { box-sizing: border-box; }
+.uak-stats button { font: inherit; }
+.uak-statsFrame {
+    padding: 18px;
+    border: 1px solid rgb(147 197 253 / 48%);
+    border-radius: 16px;
+    background: linear-gradient(135deg,
+        rgb(219 234 254 / var(--uak-card-alpha, .58)),
+        rgb(147 197 253 / var(--uak-card-alpha, .58)));
+    -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px));
+    backdrop-filter: blur(var(--uak-glass-blur, 18px));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
+}
+.uak-statsHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.uak-statsDateControls { min-width: 0; }
+.uak-statsYear { display: flex; align-items: center; gap: 7px; height: 28px; }
+.uak-statsYearLabel { min-width: 58px; font-size: 15px; font-weight: 650; text-align: center; }
+.uak-statsMonthLabel { margin: 5px 0 0 31px; color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; }
+.uak-statsIconButton {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 25px; height: 25px; padding: 0; border: 0; border-radius: 7px;
+    background: transparent; color: var(--dsw-alias-label-secondary, #64748b); cursor: pointer;
+}
+.uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, #eff6ff); color: #2563eb; }
+.uak-statsIconButton:disabled { opacity: .28; cursor: default; }
+.uak-statsIconButton:focus-visible, .uak-statsMonth:focus-visible, .uak-statsRange:focus-visible {
+    outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 2px;
+}
+.uak-statsRanges { display: flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgb(191 219 254 / 32%); }
+.uak-statsTabs { display: flex; gap: 18px; margin: 0 0 12px; border-bottom: 1px solid rgb(147 197 253 / 40%); }
+.uak-statsTab { padding: 7px 1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #1e40af; cursor: pointer; }
+.uak-statsTab[aria-selected="true"] { border-bottom-color: #2563eb; color: #172554; font-weight: 650; }
+.uak-statsBody { height: var(--uak-stats-height, 360px); min-height: 0; overflow: auto; padding-right: 3px; }
+.uak-statsBody [role="tabpanel"] { min-height: 0; }
+.uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2, #e2e8f0); border-radius: 10px; }
+.uak-statsModelRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(70px, auto); gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l2, #e2e8f0); }
+.uak-statsModelRow:last-child { border-bottom: 0; }
+.uak-statsModelRowHead { background: rgb(191 219 254 / 32%); color: #1e3a8a; font-size: 11px; }
+.uak-statsModelRow > :not(:first-child) { text-align: right; }
+.uak-statsRange {
+    height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent;
+    color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.uak-statsRange[aria-pressed="true"] { background: rgb(147 197 253 / 42%); color: #172554; box-shadow: 0 1px 4px rgb(15 23 42 / 10%); }
+.uak-statsRange:disabled { opacity: .4; cursor: not-allowed; }
+.uak-statsMonths {
+    position: relative; display: grid; grid-template-columns: repeat(12, minmax(22px, 1fr));
+    align-items: center; gap: 0; width: 100%; min-width: 300px; margin: 18px 0 16px;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.uak-statsMonths::before {
+    content: ""; position: absolute; left: 4.16%; right: 4.16%; top: 10px; height: 1px;
+    background: var(--dsw-alias-border-l2, #dbe3ef); pointer-events: none;
+}
+.uak-statsMonth {
+    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    min-width: 0; padding: 3px 0; border: 0; background: transparent;
+    color: var(--dsw-alias-label-caption, #94a3b8); font-size: 10px; cursor: pointer;
+}
+.uak-statsMonthDot {
+    display: block; width: 15px; height: 15px; border: 4px solid var(--dsw-alias-bg-primary, #fff);
+    border-radius: 50%; background: #cbd5e1; box-shadow: 0 0 0 1px transparent;
+}
+.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
+.uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; font-weight: 650; }
+.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+.uak-statsMetrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+.uak-statsMetric { min-width: 0; padding: 11px 10px; border-radius: 10px; background: rgb(191 219 254 / 30%); }
+.uak-statsMetricLabel { overflow: hidden; color: #1e40af; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsMetricValue { margin-top: 4px; overflow: hidden; color: #172554; font-size: 19px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsContent { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); gap: 20px; align-items: start; }
+.uak-statsSectionTitle { margin: 0 0 10px; color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; font-weight: 600; }
+.uak-statsHeatScroll { overflow-x: auto; max-width: 100%; padding: 1px 1px 7px; }
+.uak-statsHeatGrid {
+    display: grid; grid-template-rows: repeat(7, 20px); grid-auto-flow: column;
+    grid-auto-columns: 20px; grid-auto-rows: 20px; gap: 3px; width: max-content;
+}
+.uak-statsWeekday { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 9px; }
+.uak-statsDay {
+    display: block; flex: none; width: 20px; height: 20px; aspect-ratio: 1;
+    border-radius: 4px; background: var(--dsw-alias-fill-secondary, #e8edf3);
+}
+.uak-statsDay[data-level="1"] { background: #dbeafe; }
+.uak-statsDay[data-level="2"] { background: #93c5fd; }
+.uak-statsDay[data-level="3"] { background: #60a5fa; }
+.uak-statsDay[data-level="4"] { background: #2563eb; }
+.uak-statsDay[data-level="5"] { background: #1e3a8a; }
+.uak-statsLegend { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 11px; margin-top: 8px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 10px; }
+.uak-statsLegendItem { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.uak-statsLegendSwatch { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 2px; }
+.uak-statsBook {
+    position: relative; overflow: hidden; padding: 17px; border: 1px solid rgb(255 255 255 / 45%);
+    border-radius: 15px; background: linear-gradient(135deg, rgb(96 165 250 / 27%), rgb(29 78 216 / 17%));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 8px 26px rgb(37 99 235 / 10%);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+}
+.uak-statsBook::after {
+    content: ""; position: absolute; width: 130px; height: 130px; right: -48px; top: -54px;
+    border-radius: 50%; background: rgb(255 255 255 / 20%); pointer-events: none;
+}
+.uak-statsBookEyebrow { color: #1d4ed8; font-size: 10px; font-weight: 650; letter-spacing: .08em; }
+.uak-statsBookTitle { margin: 7px 0 1px; color: #172554; font-size: 22px; font-weight: 700; }
+.uak-statsBookEnglish { overflow: hidden; color: rgb(30 64 175 / 72%); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsBookDescription { margin: 13px 0 0; color: #1e3a8a; line-height: 1.8; }
+.uak-statsBookAmount { font-size: 18px; font-weight: 700; }
+.uak-statsBookRatio { margin-top: 5px; color: rgb(30 64 175 / 80%); font-size: 11px; }
+.uak-statsModels { margin-top: 15px; }
+.uak-statsModel { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--dsw-alias-border-l2, #e2e8f0); font-size: 11px; }
+.uak-statsModelId { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsModelValue { flex: none; color: var(--dsw-alias-label-secondary, #64748b); }
+.uak-statsStatus { padding: 26px 10px; color: var(--dsw-alias-label-secondary, #64748b); text-align: center; }
+.uak-statsError { color: var(--dsw-alias-state-danger-primary, #b91c1c); }
+.uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid currentColor; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 11px; }
+@media (prefers-color-scheme: dark) {
+    .uak-stats, .uak-statsYearLabel, .uak-statsMetricValue, .uak-statsMonth[aria-pressed="true"] { color: #dbeafe; }
+    .uak-statsMonthLabel, .uak-statsIconButton, .uak-statsSectionTitle, .uak-statsLegend,
+    .uak-statsWeekday, .uak-statsStatus, .uak-statsEmptyHint, .uak-statsModelValue { color: #bfdbfe; }
+    .uak-statsMetricLabel, .uak-statsTab, .uak-statsRange, .uak-statsModelRowHead,
+    .uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookDescription, .uak-statsBookRatio { color: #bfdbfe; }
+    .uak-statsBookTitle, .uak-statsRange[aria-pressed="true"], .uak-statsTab[aria-selected="true"] { color: #eff6ff; }
+    .uak-statsMetric, .uak-statsRanges, .uak-statsModelRowHead { background: rgb(30 64 175 / 36%); }
+}
+@media (max-width: 800px) {
+    .uak-statsContent { grid-template-columns: 1fr; }
+    .uak-statsMetrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .uak-statsHeader { flex-direction: column; }
+    .uak-statsRanges { align-self: flex-end; margin-top: -36px; }
+    .uak-statsMonths { min-width: 280px; }
+}
+@media (max-width: 480px) {
+    .uak-statsFrame { padding: 13px; }
+    .uak-statsMetrics { gap: 5px; }
+    .uak-statsMetric { padding: 8px; }
+    .uak-statsMetricValue { font-size: 16px; }
+    .uak-statsRange { padding: 0 7px; }
+}
+`;
+
+        function uakStatsStatus(message, options) {
+            const source = options !== null && typeof options === "object" ? options : {};
+            const h = react.createElement;
+            const children = [message];
+            if (source.action !== undefined && source.action !== null) children.push(source.action);
+            if (source.hint !== undefined && source.hint !== null) {
+                children.push(h("span", { className: "uak-statsEmptyHint" }, source.hint));
+            }
+            return h("div", {
+                className: source.error ? "uak-statsStatus uak-statsError" : "uak-statsStatus",
+                role: source.error ? "alert" : "status"
+            }, ...children);
+        }
+
+        // Twelve month dots. Pointer capture and keyboard focus movement are
+        // owned by the caller; this builder only paints and reports clicks.
+        function uakStatsMonthTrack(options) {
+            const source = options !== null && typeof options === "object" ? options : {};
+            const { year, month, hasData, onSelect, onKeyDown, rootProps } = source;
+            const h = react.createElement;
+            const root = Object.assign({}, rootProps);
+            root.className = "uak-statsMonths";
+            root.role = "group";
+            root["aria-label"] = uakStatsT("stats.monthsGroup");
+            const monthParam = uakStatsMonthParam(month);
+            return h("div", root, Array.from({ length: 12 }, (_, index) => {
+                const value = index + 1;
+                const active = value === month;
+                const populated = typeof hasData === "function" ? hasData(value) === true : false;
+                return h("button", {
+                    key: value,
+                    type: "button",
+                    className: "uak-statsMonth",
+                    "data-has-data": populated ? "true" : "false",
+                    "aria-label": uakStatsT(populated ? "stats.monthAria" : "stats.monthAriaEmpty", {
+                        year,
+                        month: uakStatsMonthParam(value)
+                    }),
+                    "aria-pressed": active,
+                    tabIndex: active ? 0 : -1,
+                    onKeyDown: (event) => onKeyDown?.(event, index),
+                    onClick: () => onSelect?.(value)
+                },
+                h("span", { className: "uak-statsMonthDot", "aria-hidden": "true" }),
+                h("span", null, value));
+            }));
+        }
+
+        // Six headline metrics. The label is already localized by the pure
+        // summary function; only numbers go through the units formatter.
+        function uakStatsMetricCards(metrics, formatValue) {
+            const h = react.createElement;
+            const format = typeof formatValue === "function" ? formatValue : (value) => String(value);
+            const items = Array.isArray(metrics) ? metrics : [];
+            return h("div", { className: "uak-statsMetrics" }, items.map((metric) => h("div", {
+                key: metric.id,
+                className: "uak-statsMetric"
+            },
+            h("div", { className: "uak-statsMetricLabel" }, metric.label),
+            h("div", { className: "uak-statsMetricValue", title: String(metric.value) },
+                metric.format === "text" ? metric.value : format(metric.value)))));
+        }
+
+        // Square day grid: 7 rows, Monday-first, one level per cell. `cells`
+        // carries the blanks/dates from uakDayCells, `levels` only the shades.
+        function uakStatsHeatmap(options) {
+            const source = options !== null && typeof options === "object" ? options : {};
+            const { year, month, levels, cells, formatValue } = source;
+            const h = react.createElement;
+            const format = typeof formatValue === "function" ? formatValue : (value) => String(value);
+            const shades = Array.isArray(levels) ? levels : [];
+            const days = Array.isArray(cells) ? cells : [];
+            const weekdays = uakStatsT("stats.weekdays");
+            const monthParam = uakStatsMonthParam(month);
+            return h("section", null,
+                h("h2", { className: "uak-statsSectionTitle" }, uakStatsT("stats.heatTitle", { year, month: monthParam })),
+                h("div", { className: "uak-statsHeatScroll" },
+                    h("div", {
+                        className: "uak-statsHeatGrid",
+                        role: "img",
+                        "aria-label": uakStatsT("stats.heatAria", { year, month: monthParam })
+                    },
+                        weekdays.map((day, index) => h("span", {
+                            key: `${day}-${index}`,
+                            className: "uak-statsWeekday",
+                            "aria-hidden": "true"
+                        }, day)),
+                        shades.map((level, index) => {
+                            const cell = days[index];
+                            if (cell === undefined || cell.blank) {
+                                return h("span", {
+                                    key: cell?.key ?? `blank-${index}`,
+                                    className: "uak-statsDay",
+                                    style: { visibility: "hidden" }
+                                });
+                            }
+                            return h("span", {
+                                key: cell.key,
+                                className: "uak-statsDay",
+                                "data-level": level,
+                                title: uakStatsT("stats.cellTitle", {
+                                    date: cell.date,
+                                    tokens: format(cell.tokens),
+                                    messages: format(cell.messages)
+                                })
+                            });
+                        })
+                    )
+                )
+            );
+        }
+
+        function uakStatsLegend(legends) {
+            const h = react.createElement;
+            const items = Array.isArray(legends) ? legends : [];
+            return h("div", { className: "uak-statsLegend", "aria-label": uakStatsT("stats.heatLegendAria") },
+                items.filter((legend) => legend.level > 0).map((legend) => h("span", {
+                    key: legend.level,
+                    className: "uak-statsLegendItem"
+                },
+                h("span", { className: "uak-statsLegendSwatch", style: { background: legend.color } }),
+                `${legend.label} Token`)));
+        }
+
+        // One book compared against the tokens of the active range. The caller
+        // may pass a legend element; it is shown only when a book is compared,
+        // which preserves the original layout in both states.
+        function uakStatsBookComparison(options) {
+            const source = options !== null && typeof options === "object" ? options : {};
+            const { book, mode, tokens, range, units, formatNumber, legend } = source;
+            const h = react.createElement;
+            const bookStats = uakBookStats(book, tokens);
+            if (bookStats === null) return h("div", { className: "uak-statsBook" }, uakStatsT("stats.bookEmpty"));
+            const percent = bookStats.percent < 0.01 && bookStats.percent > 0
+                ? "<0.01" : Number(bookStats.percent.toFixed(2));
+            const titleParam = { zh: bookStats.title, en: bookStats.englishTitle };
+            return h(react.Fragment, null,
+                h("article", { className: "uak-statsBook" },
+                    h("div", { className: "uak-statsBookEyebrow" },
+                        `${mode === "random" ? uakStatsT("stats.bookRandom") : uakStatsT("stats.bookSelected")} · ${uakBookTier(bookStats)}`),
+                    h("h3", { className: "uak-statsBookTitle" }, uakStatsT("stats.bookTitle", { title: titleParam })),
+                    h("div", { className: "uak-statsBookEnglish", title: bookStats.englishTitle }, bookStats.englishTitle),
+                    h("p", { className: "uak-statsBookDescription" }, uakStatsT("stats.bookDescription", {
+                        title: titleParam,
+                        chars: {
+                            zh: uakFormatNumber(bookStats.chars, "myriad"),
+                            en: uakFormatNumber(bookStats.chars, "short")
+                        },
+                        tier: uakBookTier(bookStats),
+                        period: uakStatsPeriodParam(range),
+                        tokens: typeof formatNumber === "function" ? formatNumber(tokens) : String(tokens),
+                        equivalent: uakFormatNumber(bookStats.equivalent, units)
+                    })),
+                    h("div", { className: "uak-statsBookRatio" },
+                        uakStatsT("stats.bookRatio", { percent }))
+                ),
+                legend === undefined || legend === null ? null : legend);
+        }
+
+        function uakStatsModelTable(options) {
+            const source = options !== null && typeof options === "object" ? options : {};
+            const {
+                models, rangeLabel, formatNumber,
+                panelId = "uak-stats-tabpanel-models",
+                labelledBy = "uak-stats-tab-models"
+            } = source;
+            const h = react.createElement;
+            const format = typeof formatNumber === "function" ? formatNumber : (value) => String(value);
+            const rows = Array.isArray(models) ? models : [];
+            return h("div", {
+                className: "uak-statsModelTable",
+                role: "tabpanel",
+                id: panelId,
+                "aria-labelledby": labelledBy
+            },
+            h("div", { className: "uak-statsModelRow uak-statsModelRowHead" },
+                h("span", null, uakStatsT("stats.modelTable.model")),
+                h("span", null, "Token"),
+                h("span", null, uakStatsT("stats.modelTable.messages"))),
+            rows.length === 0
+                ? uakStatsStatus(uakStatsT("stats.noModels", { range: rangeLabel }))
+                : rows.map((model) => h("div", { key: model.id, className: "uak-statsModelRow" },
+                    h("span", { className: "uak-statsModelId", title: model.id }, model.id),
+                    h("span", null, format(model.tokens)),
+                    h("span", null, format(model.messages)))));
+        }
+        //#endregion
+
+        //#region client/statistics-ui.js
+// Usage panel UI: state, fetching, pointer/keyboard interaction,
+        // assembly, and slot registration. Markup lives in
+        // client/statistics-views.js and copy in client/statistics-i18n.js, so
+        // this file stays free of CSS and bilingual literals. React is supplied
+        // by the shared client factory.
+        const uakUsagePanelSlot = "conversation.input.dock";
+        const uakUsageEndpoint = "/utility-appearance-kit/usage";
+        const uakUsageCacheTTL = 30000;
+        let uakUsageCache = null;
+
+        function uakUsageReadSettings(settingsStore) {
+            try {
+                const state = settingsStore?.getState?.();
+                return state !== null && typeof state === "object" ? state : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function uakUsageShouldShow(props) {
+            return props?.blank === true && props?.running === false && props?.promptAttempted === false;
+        }
+
+        function uakUsageVisibility(props) {
+            const source = props !== null && typeof props === "object" ? props : {};
+            if (Object.prototype.hasOwnProperty.call(source, "blank")
+                || Object.prototype.hasOwnProperty.call(source, "running")
+                || Object.prototype.hasOwnProperty.call(source, "promptAttempted")) {
+                return uakUsageShouldShow(source);
+            }
+            for (const key of ["session", "conversation", "state", "status", "slotProps"]) {
+                const nested = source[key];
+                if (nested !== null && typeof nested === "object" && (
+                    Object.prototype.hasOwnProperty.call(nested, "blank")
+                    || Object.prototype.hasOwnProperty.call(nested, "running")
+                    || Object.prototype.hasOwnProperty.call(nested, "promptAttempted")
+                )) return uakUsageShouldShow(nested);
+            }
+            return false;
+        }
+
+        async function uakFetchUsage(signal) {
+            const response = await fetch(uakUsageEndpoint, {
+                method: "GET",
+                headers: { "x-dsh-uak-usage": "1" },
+                signal
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const summary = await response.json();
+            if (summary === null || typeof summary !== "object" || Array.isArray(summary)) {
+                throw new Error(uakStatsT("stats.invalidResponse"));
+            }
+            return summary;
+        }
+
+        function uakCreateUsagePanel(settingsStore) {
+            const h = react.createElement;
+            const randomBook = uakBooks[Math.floor(Math.random() * uakBooks.length)];
+
+            function UsagePanel(props) {
+                const visible = uakUsageVisibility(props);
+                const today = react.useMemo(() => new Date(), []);
+                const [, setUiRevision] = react.useState(0);
+                const [year, setYear] = react.useState(today.getFullYear());
+                const [month, setMonth] = react.useState(today.getMonth() + 1);
+                const [range, setRange] = react.useState("month");
+                const [tab, setTab] = react.useState("overview");
+                const [settings, setSettings] = react.useState(() => uakUsageReadSettings(settingsStore));
+                const [request, setRequest] = react.useState({ status: "loading", summary: null, error: null });
+                const [reloadKey, setReloadKey] = react.useState(0);
+                const mountedRef = react.useRef(true);
+                const abortRef = react.useRef(null);
+                const monthTrackRef = react.useRef(null);
+                const monthPointerRef = react.useRef(null);
+
+                react.useEffect(() => uakSubscribeUiLocale(setUiRevision), []);
+                react.useEffect(() => {
+                    if (typeof settingsStore?.subscribe !== "function") return undefined;
+                    return settingsStore.subscribe(() => setSettings(uakUsageReadSettings(settingsStore)));
+                }, []);
+
+                react.useEffect(() => {
+                    if (!visible) return undefined;
+                    mountedRef.current = true;
+                    const cached = uakUsageCache;
+                    if (reloadKey === 0 && cached !== null && Date.now() - cached.time < uakUsageCacheTTL) {
+                        setRequest({ status: "ready", summary: cached.summary, error: null });
+                        return undefined;
+                    }
+                    abortRef.current?.abort();
+                    const controller = new AbortController();
+                    abortRef.current = controller;
+                    setRequest((current) => ({ status: "loading", summary: current.summary, error: null }));
+                    uakFetchUsage(controller.signal).then((summary) => {
+                        if (controller.signal.aborted || !mountedRef.current) return;
+                        uakUsageCache = { time: Date.now(), summary };
+                        setRequest({ status: "ready", summary, error: null });
+                    }).catch((error) => {
+                        if (controller.signal.aborted || !mountedRef.current) return;
+                        setRequest({ status: "error", summary: null, error });
+                    });
+                    return () => controller.abort();
+                }, [reloadKey, visible]);
+
+                react.useEffect(() => () => {
+                    mountedRef.current = false;
+                    abortRef.current?.abort();
+                }, []);
+
+                const summary = request.summary;
+                const years = react.useMemo(() => uakAvailableYears(summary), [summary]);
+                const previousYear = [...years].reverse().find((value) => value < year);
+                const nextYear = years.find((value) => value > year);
+                const monthSummary = react.useMemo(
+                    () => uakSummarizeMonth(summary, year, month),
+                    [summary, year, month]
+                );
+                const rangeSummary = react.useMemo(
+                    () => uakSummarizeRange(summary, range, year, month, today),
+                    [summary, range, year, month, today]
+                );
+                const current = range === "month" ? monthSummary : rangeSummary;
+                const heatmap = react.useMemo(
+                    () => uakMonthHeatmap(summary, year, month, settings.units),
+                    [summary, year, month, settings.units]
+                );
+                const sourceCells = uakDayCells(summary, year, month);
+                const mode = settings.bookMode === "selected" ? "selected" : "random";
+                const selectedBook = mode === "selected" ? uakBookByTitle(settings.bookTitle) : undefined;
+                const book = selectedBook ?? (mode === "selected" ? null : randomBook);
+                const units = ["auto", "short", "myriad"].includes(settings.units) ? settings.units : "auto";
+                const number = (value) => uakFormatNumber(value, units);
+
+                // One predicate feeds the month track dots and the "no data"
+                // state, so both always agree on the selected year.
+                const hasMonthData = (value) => summary?.perDay !== null && typeof summary?.perDay === "object"
+                    && Object.keys(summary.perDay).some((date) => date.startsWith(
+                        `${year}-${String(value).padStart(2, "0")}-`
+                    ));
+                const monthHasData = hasMonthData(month);
+
+                const chooseYear = (next) => {
+                    if (!years.includes(next)) return;
+                    setYear(next);
+                    setRange("month");
+                    if (!hasMonthData(month) && next !== today.getFullYear()) {
+                        const months = Object.keys(summary.perDay)
+                            .filter((date) => date.startsWith(`${next}-`))
+                            .map((date) => Number(date.slice(5, 7)));
+                        if (months.length > 0) setMonth(months[0]);
+                    }
+                };
+
+                const onMonthKeyDown = (event, index) => {
+                    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                    event.preventDefault();
+                    const next = Math.min(11, Math.max(0, index + (event.key === "ArrowRight" ? 1 : -1)));
+                    setMonth(next + 1);
+                    setRange("month");
+                    event.currentTarget.parentElement?.children[next]?.focus();
+                };
+
+                const selectMonthAtPointer = (event) => {
+                    const track = monthTrackRef.current;
+                    if (track === null) return;
+                    const bounds = track.getBoundingClientRect();
+                    if (!(bounds.width > 0)) return;
+                    const ratio = Math.min(0.999999, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+                    setMonth(Math.floor(ratio * 12) + 1);
+                    setRange("month");
+                };
+                const onMonthPointerDown = (event) => {
+                    if (event.button !== 0 || monthPointerRef.current !== null) return;
+                    event.preventDefault();
+                    monthPointerRef.current = event.pointerId;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    selectMonthAtPointer(event);
+                };
+                const onMonthPointerMove = (event) => {
+                    if (monthPointerRef.current !== event.pointerId) return;
+                    event.preventDefault();
+                    selectMonthAtPointer(event);
+                };
+                const onMonthPointerUp = (event) => {
+                    if (monthPointerRef.current !== event.pointerId) return;
+                    selectMonthAtPointer(event);
+                    monthPointerRef.current = null;
+                    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                    }
+                };
+
+                const rangeLabel = uakStatsRangeLabel(range);
+                const empty = request.status === "ready" && current.tokens === 0 && current.messages === 0;
+                const noSelectedMonth = request.status === "ready" && range === "month" && !monthHasData;
+
+                const bodyHeight = Number.isFinite(Number(settings.bodyHeight))
+                    ? Math.max(180, Math.min(900, Number(settings.bodyHeight))) : 360;
+
+                if (!visible) return null;
+
+                return h("section", {
+                    className: "uak-stats",
+                    "aria-label": uakStatsT("stats.section"),
+                    style: { "--uak-stats-height": `${bodyHeight}px` }
+                },
+                    h("div", { className: "uak-statsFrame" },
+                        h("header", { className: "uak-statsHeader" },
+                            h("div", { className: "uak-statsDateControls" },
+                                h("div", { className: "uak-statsYear" },
+                                    h("button", {
+                                        type: "button",
+                                        className: "uak-statsIconButton",
+                                        "aria-label": uakStatsT("stats.prevYear"),
+                                        disabled: previousYear === undefined,
+                                        onClick: () => chooseYear(previousYear)
+                                    }, "‹"),
+                                    h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
+                                    h("button", {
+                                        type: "button",
+                                        className: "uak-statsIconButton",
+                                        "aria-label": uakStatsT("stats.nextYear"),
+                                        disabled: nextYear === undefined,
+                                        onClick: () => chooseYear(nextYear)
+                                    }, "›")
+                                ),
+                                h("div", { className: "uak-statsMonthLabel" },
+                                    range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint"))
+                            ),
+                            h("div", { className: "uak-statsRanges", role: "group", "aria-label": uakStatsT("stats.rangeGroup") },
+                                ["month", "all", "30d", "7d"].map((id) => h("button", {
+                                    key: id,
+                                    type: "button",
+                                    className: "uak-statsRange",
+                                    "aria-pressed": range === id,
+                                    disabled: false,
+                                    onClick: () => {
+                                        setRange(id);
+                                        if (id !== "month") setTab("overview");
+                                    }
+                                }, uakStatsRangeLabel(id))))
+                        ),
+                        uakStatsMonthTrack({
+                            year,
+                            month,
+                            hasData: hasMonthData,
+                            onSelect: (value) => {
+                                setMonth(value);
+                                setRange("month");
+                            },
+                            onKeyDown: onMonthKeyDown,
+                            rootProps: {
+                                ref: monthTrackRef,
+                                onPointerDown: onMonthPointerDown,
+                                onPointerMove: onMonthPointerMove,
+                                onPointerUp: onMonthPointerUp,
+                                onPointerCancel: onMonthPointerUp
+                            }
+                        }),
+                        h("div", { className: "uak-statsTabs", role: "tablist", "aria-label": uakStatsT("stats.tabs") },
+                            [["overview", uakStatsT("stats.tab.overview")], ["models", uakStatsT("stats.tab.models")]].map(([id, label]) => h("button", {
+                                key: id,
+                                type: "button",
+                                role: "tab",
+                                id: `uak-stats-tab-${id}`,
+                                className: "uak-statsTab",
+                                "aria-selected": tab === id,
+                                "aria-controls": `uak-stats-tabpanel-${id}`,
+                                onClick: () => setTab(id)
+                            }, label))
+                        ),
+                        h("div", { className: "uak-statsBody" },
+                            request.status === "loading" && summary === null
+                                ? uakStatsStatus(uakStatsT("stats.loading"))
+                                : request.status === "error"
+                                    ? uakStatsStatus(uakStatsT("stats.error"), {
+                                        error: true,
+                                        action: h("button", {
+                                            type: "button",
+                                            className: "uak-statsRetry",
+                                            onClick: () => setReloadKey((key) => key + 1)
+                                        }, uakStatsT("stats.retry"))
+                                    })
+                                    : h(react.Fragment, null,
+                                        noSelectedMonth ? uakStatsStatus(
+                                            uakStatsT("stats.noMonth", { year, month }),
+                                            { hint: uakStatsT("stats.noMonthHint") })
+                                            : empty ? uakStatsStatus(
+                                                uakStatsT("stats.empty", { range: rangeLabel }),
+                                                { hint: uakStatsT("stats.emptyHint") })
+                                                : tab === "models"
+                                                    ? uakStatsModelTable({
+                                                        models: current.models,
+                                                        rangeLabel,
+                                                        formatNumber: number
+                                                    })
+                                                    : h("div", {
+                                                        role: "tabpanel",
+                                                        id: "uak-stats-tabpanel-overview",
+                                                        "aria-labelledby": "uak-stats-tab-overview"
+                                                    },
+                                                        uakStatsMetricCards(current.metrics, number),
+                                                        h("div", { className: "uak-statsContent" },
+                                                            uakStatsHeatmap({
+                                                                year,
+                                                                month,
+                                                                levels: heatmap.levels,
+                                                                cells: sourceCells,
+                                                                formatValue: number
+                                                            }),
+                                                            h("section", null,
+                                                                h("h2", { className: "uak-statsSectionTitle" },
+                                                                    `${rangeLabel} · ${uakStatsT("stats.bookSection")}`),
+                                                                uakStatsBookComparison({
+                                                                    book,
+                                                                    mode,
+                                                                    tokens: current.tokens,
+                                                                    range,
+                                                                    units,
+                                                                    formatNumber: number,
+                                                                    legend: uakStatsLegend(heatmap.legends)
+                                                                })
+                                                            )
+                                                        )
+                                                    )
+                                    )
+                        )
+                    )
+                );
+            }
+
+            UsagePanel.displayName = "UtilityAppearanceKitUsagePanel";
+            return UsagePanel;
+        }
+
+        // The Host/apply layer owns the shared settings store and injects it
+        // here; this module never creates a second settings page or store.
+        function uakRegisterUsagePanel(ctx, settingsStore) {
+            if (typeof ctx?.inject !== "function") return () => {};
+            let disposed = false;
+            let unregister;
+            const mount = (scope) => {
+                if (disposed) return undefined;
+                const slots = scope.get("slots");
+                const component = uakCreateUsagePanel(settingsStore);
+                unregister = slots.inject(uakUsagePanelSlot, () => slots.register({
+                    name: uakUsagePanelSlot,
+                    id: "utility-appearance-kit-statistics",
+                    order: 80,
+                    available: uakUsageShouldShow
+                }, component));
+                return () => {
+                    try { unregister?.(); } catch { /* ignore */ }
+                    unregister = undefined;
+                };
+            };
+            const install = () => ctx.inject(["slots"], (scope) => {
+                if (typeof scope.effect === "function") return scope.effect(() => mount(scope));
+                return mount(scope);
+            });
+            const disposeEffect = typeof ctx.effect === "function" ? ctx.effect(install) : install();
+            return () => {
+                disposed = true;
+                try { disposeEffect?.(); } catch { /* ignore */ }
+                try { unregister?.(); } catch { /* ignore */ }
+                unregister = undefined;
+            };
+        }
+        //#endregion
+
+        //#region client/settings-page.js
+function uakCreateSettingsPage() {
+            const h = react.createElement;
+            const Slider = ({ label, field, min, max, step = 1, suffix = "", draft, update }) => h("label", { className: "uak-setting-slider" },
+                h("span", null, label),
+                h("input", { type: "range", min, max, step, value: draft[field], onChange: (event) => update(field, Number(event.target.value)), "aria-label": label }),
+                h("output", null, `${draft[field]}${suffix}`));
+            const Choice = ({ label, options, value, onChange }) => h("div", { className: "uak-setting-choice" },
+                h("span", null, label), h("div", { className: "uak-setting-options", role: "group", "aria-label": label },
+                    options.map(([id, text]) => h("button", { key: id, type: "button", className: "uak-chip", "data-active": value === id ? "true" : "false", "aria-pressed": value === id, onClick: () => onChange(id) }, text))));
+            return function UakSettingsPage() {
+                const [, setRevision] = react.useState(0);
+                const [draft, setDraft] = react.useState(uakSettingsStore.getState);
+                const [message, setMessage] = react.useState(uakTr("正在读取配置…", "Loading settings…"));
+                const [saving, setSaving] = react.useState(false);
+                const fileRef = react.useRef(null);
+                react.useEffect(() => uakSubscribeUiLocale(setRevision), []);
+                react.useEffect(() => { void uakLoadSettings().then((value) => { setDraft(value); setMessage(""); }); }, []);
+                const update = (field, value) => setDraft((previous) => ({ ...previous, [field]: value }));
+                const chooseFile = async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setSaving(true);
+                    try { update("imageUrl", await uakUploadImage(file)); setMessage(uakTr("图片已上传，点击“保存配置”后应用。", 'Image uploaded. Click "Save settings" to apply.')); }
+                    catch (error) { setMessage(uakTr("图片上传失败，请检查文件与网络。", "Upload failed. Check the image and your connection.")); console.warn("[utility-appearance-kit] image upload:", error); }
+                    finally { setSaving(false); event.target.value = ""; }
+                };
+                const save = async () => {
+                    setSaving(true);
+                    try { await uakSaveSettings(draft); setMessage(uakTr("配置已保存并即时生效，无需重启。", "Saved and applied. No restart needed.")); }
+                    catch (error) { setMessage(uakTr("保存失败，请稍后重试。", "Could not save settings. Please try again.")); console.warn("[utility-appearance-kit] settings save:", error); }
+                    finally { setSaving(false); }
+                };
+                return h("div", { className: "uak-settings" },
+                    h("p", { className: "uak-settings-intro" }, uakTr("壁纸、玻璃与月度阅读统计。原生界面和交互保持不变。", "Wallpaper, glass, and monthly reading statistics. Native controls and interactions stay intact.")),
+                    h("section", { className: "uak-settings-section" },
+                        h("h2", null, uakTr("图片壁纸", "Image wallpaper")),
+                        h("div", { className: "uak-setting-url" },
+                            h("input", { type: "url", value: draft.imageUrl, placeholder: uakTr("https://… 或已上传图片地址", "https://… or an uploaded image URL"), "aria-label": uakTr("图片地址", "Image URL"), onChange: (event) => update("imageUrl", event.target.value) }),
+                            h("input", { ref: fileRef, hidden: true, type: "file", accept: "image/png,image/jpeg,image/gif,image/webp", onChange: chooseFile }),
+                            h("button", { type: "button", className: "uak-chip", onClick: () => fileRef.current?.click() }, uakTr("选择图片", "Choose image")),
+                            h("button", { type: "button", className: "uak-chip", onClick: () => update("imageUrl", "") }, uakTr("清除", "Clear"))),
+                        h(Choice, { label: uakTr("显示模式", "Display mode"), value: draft.imageMode, onChange: (value) => update("imageMode", value), options: [["cover", uakTr("填充", "Cover")], ["contain", uakTr("适应", "Contain")], ["repeat", uakTr("平铺", "Repeat")]] }),
+                        h("div", { className: "uak-setting-sliders" },
+                            h(Slider, { label: uakTr("背景模糊", "Background blur"), field: "blur", min: 0, max: 40, suffix: "px", draft, update }),
+                            h(Slider, { label: uakTr("界面透明度", "UI opacity"), field: "opacity", min: 0, max: 100, suffix: "%", draft, update }),
+                            h(Slider, { label: uakTr("图片缩放", "Image zoom"), field: "scale", min: -100, max: 100, draft, update }),
+                            h(Slider, { label: uakTr("亮度", "Brightness"), field: "brightness", min: 50, max: 150, suffix: "%", draft, update }),
+                            h(Slider, { label: uakTr("对比度", "Contrast"), field: "contrast", min: 50, max: 150, suffix: "%", draft, update }),
+                            h(Slider, { label: uakTr("饱和度", "Saturation"), field: "saturate", min: 0, max: 200, suffix: "%", draft, update }))),
+                    h("section", { className: "uak-settings-section" },
+                        h("h2", null, uakTr("液态与磨砂玻璃", "Liquid and frosted glass")),
+                        h("div", { className: "uak-setting-sliders" },
+                            h(Slider, { label: uakTr("磨砂模糊", "Frosted blur"), field: "glassBlur", min: 0, max: 40, suffix: "px", draft, update }),
+                            h(Slider, { label: uakTr("卡片不透明度", "Card opacity"), field: "glassOpacity", min: 20, max: 95, suffix: "%", draft, update }),
+                            h(Slider, { label: uakTr("弹层不透明度", "Popup opacity"), field: "popupOpacity", min: 40, max: 100, suffix: "%", draft, update }),
+                            h(Slider, { label: uakTr("统计面板高度", "Statistics height"), field: "bodyHeight", min: 300, max: 560, step: 4, suffix: "px", draft, update })),
+                        h(Choice, { label: uakTr("数字单位", "Number units"), value: draft.units, onChange: (value) => update("units", value), options: [["auto", uakTr("跟随语言", "Follow language")], ["myriad", uakTr("万 / 亿", "10K / 100M")], ["short", "K / M / B"]] })),
+                    h("section", { className: "uak-settings-section uak-book-settings" },
+                        h("h2", null, uakTr("月度书卷", "Monthly books")),
+                        h("p", null, uakTr("短章不足5万字；中构5万至不足30万字；鸿篇30万字及以上。字数为约数。", "Short: under 50K characters. Medium: 50K–300K. Epic: 300K or more. Counts are approximate.")),
+                        h(Choice, { label: uakTr("书目选取", "Book selection"), value: draft.bookMode, onChange: (value) => update("bookMode", value), options: [["random", uakTr("随机选书", "Random")], ["selected", uakTr("固定选书", "Selected")]] }),
+                        h("div", { className: "uak-book-catalog", role: "listbox", "aria-label": uakTr("选择书目", "Select a book") },
+                            uakBookCatalog.map((book) => h("button", { key: book.title, type: "button", role: "option", "aria-selected": draft.bookMode === "selected" && draft.bookTitle === book.title, "data-active": draft.bookTitle === book.title ? "true" : "false", className: "uak-book-option", onClick: () => setDraft((previous) => ({ ...previous, bookMode: "selected", bookTitle: book.title })) },
+                                h("strong", null, uakTr(`《${book.title}》`, book.englishTitle)),
+                                h("span", null, uakTr(`约${book.chars / 10000}万字 · ${book.tier}`, `≈${uakFormatNumber(book.chars, "short")} chars · ${uakBookTier(book)}`))))),
+                        h("button", { type: "button", className: "uak-save", disabled: saving, onClick: save }, saving ? uakTr("保存中…", "Saving…") : uakTr("保存配置", "Save settings")),
+                        message ? h("p", { className: "uak-save-message", role: "status" }, message) : null));
+            };
+        }
+        function uakMountSettings(ctx) {
+            const page = uakCreateSettingsPage();
+            const locale = "utility-appearance-kit/settings";
+            if (ctx.locale?.register) ctx.effect(() => ctx.locale.register(locale, { zh: { nav: "外观与月度书卷" }, en: { nav: "Appearance & Monthly Books" } }), locale);
+            const navLabel = () => {
+                try {
+                    if (typeof ctx.locale?.bind === "function") return ctx.locale.bind(locale)("nav");
+                } catch { /* local language fallback */ }
+                return uakTr("外观与月度书卷", "Appearance & Monthly Books");
+            };
+            ctx.slots.inject("settings.section", () => ctx.slots.register({
+                name: "settings.section", id: "utility-appearance-kit", order: 2,
+                label: navLabel, locale,
+                children: { "settings.utility-appearance-kit.item": { kind: "list", scope: "root" } }
+            }, function UakSettingsSection({ renderSlot }) {
+                if (typeof renderSlot !== "function") return null;
+                return renderSlot("settings.utility-appearance-kit.item", {});
+            }));
+            ctx.slots.inject("settings.utility-appearance-kit.item", () => ctx.slots.register({ name: "settings.utility-appearance-kit.item", id: "appearance" }, page));
         }
         //#endregion
 
@@ -1442,6 +3194,21 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
                 console.warn("[utility-appearance-kit] top-bar actions skipped:", error);
             }
             try {
+                if (typeof ctx.effect === "function") {
+                    ctx.effect(() => uakMountUiLocale(ctx));
+                    ctx.effect(() => uakMountAppearance());
+                    ctx.effect(() => uakMountSessionLogDismissal());
+                } else {
+                    uakMountAppearance();
+                    uakMountSessionLogDismissal();
+                }
+            } catch (error) { console.warn("[utility-appearance-kit] appearance/log dismissal unavailable:", error); }
+            try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
+            try {
+                if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));
+                else uakRegisterUsagePanel(ctx, uakSettingsStore);
+            } catch (error) { console.warn("[utility-appearance-kit] usage panel unavailable:", error); }
+            try {
                 mountSliderAndPricing(ctx, options);
             } catch (error) {
                 console.warn("[utility-appearance-kit] slider/pricing mount skipped:", error);
@@ -1474,7 +3241,23 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
                 mergeCalendar,
                 nextPeakChangeAt,
                 remainingLabel,
-                normalizeOptions
+                normalizeOptions,
+                uakStatsT,
+                uakBooks,
+                uakBookTier,
+                uakHeatThresholds,
+                uakPositiveTokenHistory,
+                uakPerDayEntries,
+                uakMonthHeatmap,
+                uakSummarizeMonth,
+                uakSanitizeSettings,
+                uakFormatNumber,
+                uakStatsMonthTrack,
+                uakStatsHeatmap,
+                uakStatsMetricCards,
+                uakStatsBookComparison,
+                uakStatsModelTable,
+                uakStatsStatus
             };
         }
         //#endregion

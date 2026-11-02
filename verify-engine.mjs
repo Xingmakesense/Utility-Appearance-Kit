@@ -61,10 +61,13 @@ const on = (name, fn) => {
 };
 const child = { configEditor: editor, on, effect: (fn) => fn() };
 const web = {
+    routes: [],
     register(route) {
-        if (route.path !== "/utility-appearance-kit/holidays.json") throw new Error("unexpected holiday route");
+        if (!["/utility-appearance-kit/holidays.json", "/utility-appearance-kit/usage", "/utility-appearance-kit"].includes(route.path)) throw new Error("unexpected plugin route");
+        this.routes.push(route.path);
         return () => {};
-    }
+    },
+    getOrigin: () => "http://127.0.0.1:49223"
 };
 let mutated = false;
 const llm = {

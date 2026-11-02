@@ -13,7 +13,7 @@
                 tag.dataset.pluginCss = STYLE_TAG_ID;
                 document.head.appendChild(tag);
             }
-            const css = [sliderCss, pricingCss].join("\n");
+            const css = [sliderCss, pricingCss, UAK_GLASS_CSS, UAK_SETTINGS_CSS, UAK_STATS_CSS].join("\n");
             if (tag.textContent !== css) tag.textContent = css;
             return () => {
                 if (tag.isConnected) tag.remove();

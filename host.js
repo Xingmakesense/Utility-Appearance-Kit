@@ -1,4 +1,6 @@
 import { installDeclarationEngine } from "./host/declarations.js";
+import { installAppearance } from "./host/appearance.js";
+import { installUsageStats } from "./host/usage-route.js";
 import { installHolidayCalendar } from "./host/holiday.js";
 import { Config, normalizeOptions } from "./host/options.js";
 import { declarationTest } from "./host/declarations.js";
@@ -28,4 +30,6 @@ export function apply(ctx, config) {
         installDeclarationEngine(ctx);
     }
     installHolidayCalendar(ctx);
+    installAppearance(ctx);
+    installUsageStats(ctx);
 }
