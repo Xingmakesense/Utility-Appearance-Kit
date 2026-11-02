@@ -85,6 +85,12 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     assert.equal(client.includes("new MutationObserver"), true, "candidate-node observers must be present");
     assert.equal(client.includes("new MutationObserver(scan)"), false, "whole-document scans on every mutation are forbidden");
     assert.equal(client.includes("record.addedNodes.length"), true, "observers must inspect only additions");
+    assert.equal(client.includes('--dsw-specific-input-major: rgb(27 38 56 / var(--uak-input-alpha, .4)) !important'), true,
+        "dark theme must keep the wallpaper visible behind translucent surfaces");
+    assert.equal(client.includes('--dsw-alias-bg-base: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important'), true,
+        "light theme must keep the wallpaper visible behind translucent surfaces");
+    assert.equal(client.includes('const navLabel = () => uakTr("外观与月度书卷", "Appearance & Monthly Books")'), true,
+        "settings navigation must never expose a raw locale key");
     assert.equal(client.includes("videoUrl"), false, "video wallpaper must stay removed");
     assert.equal(host.includes("installAccountData"), false, "account module must not load in Utility");
     assert.equal(hostDeclarations.includes("MODEL_INFO_TIMEOUT_MS"), true, "model-info timeout must remain");

@@ -1,12 +1,24 @@
         const UAK_GLASS_CSS = `
-html.uak-liquid, html.uak-liquid body { background: transparent; }
-html.uak-liquid body {
-  --dsw-alias-bg-base: rgb(24 31 46 / var(--uak-surface-alpha, .12));
-  --dsw-alias-bg-layer-1: rgb(31 40 57 / var(--uak-surface-alpha, .12));
-  --dsw-alias-bg-layer-2: rgb(37 48 68 / var(--uak-surface-alpha, .12));
-  --dsw-alias-bg-layer-3: rgb(45 58 80 / var(--uak-popup-alpha, .86));
-  --dsw-specific-sidebar-fill: rgb(24 33 49 / var(--uak-surface-alpha, .12));
-  --dsw-alias-bg-module-platform: rgb(59 79 111 / .48);
+html.uak-liquid, html.uak-liquid body { background: transparent !important; }
+html.uak-liquid body,
+html.uak-liquid body[data-ds-dark-theme],
+html.uak-liquid body[data-ds-light-theme] {
+  --dsw-alias-bg-base: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-1: rgb(255 255 255 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-2: rgb(247 251 255 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-3: rgb(255 255 255 / var(--uak-popup-alpha, .86)) !important;
+  --dsw-specific-sidebar-fill: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-module-platform: rgb(219 234 254 / .48) !important;
+  --dsw-specific-input-major: rgb(255 255 255 / var(--uak-input-alpha, .4)) !important;
+}
+html.uak-liquid body[data-ds-dark-theme] {
+  --dsw-alias-bg-base: rgb(16 23 36 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-1: rgb(31 40 57 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-2: rgb(37 48 68 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-layer-3: rgb(45 58 80 / var(--uak-popup-alpha, .86)) !important;
+  --dsw-specific-sidebar-fill: rgb(24 33 49 / var(--uak-surface-alpha, .12)) !important;
+  --dsw-alias-bg-module-platform: rgb(59 79 111 / .48) !important;
+  --dsw-specific-input-major: rgb(27 38 56 / var(--uak-input-alpha, .4)) !important;
 }
 #dsk-skin-root { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; background: #101724; }
 #dsk-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }

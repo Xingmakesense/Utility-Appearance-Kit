@@ -70,12 +70,7 @@
         function uakMountSettings(ctx) {
             const page = uakCreateSettingsPage();
             const locale = "utility-appearance-kit/settings";
-            const navLabel = () => {
-                try {
-                    if (typeof ctx.locale?.bind === "function") return ctx.locale.bind(locale)("nav");
-                } catch { /* local language fallback */ }
-                return uakTr("外观与月度书卷", "Appearance & Monthly Books");
-            };
+            const navLabel = () => uakTr("外观与月度书卷", "Appearance & Monthly Books");
             // Register the visible section before any optional localization. A
             // duplicate dictionary (HMR, two profiles in one page) must never
             // remove the only entry point to these settings.

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const SETTINGS_PATH = "/utility-appearance-kit/settings";
 const ASSET_PREFIX = "/utility-appearance-kit/asset/";
+const ASSET_ROUTE = "/utility-appearance-kit/asset";
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const IMAGE_TYPES = Object.freeze({ ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" });
 const IMAGE_MIMES = new Set(Object.values(IMAGE_TYPES));
@@ -137,7 +138,7 @@ export function installAppearance(ctx) {
             const disposers = [
                 scope.webServer.register({ kind: "exact", path: SETTINGS_PATH, handler: handle }),
                 scope.webServer.register({ kind: "exact", path: "/utility-appearance-kit/asset", handler: handle }),
-                scope.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: handle })
+                scope.webServer.register({ kind: "prefix", path: ASSET_ROUTE, handler: handle })
             ].filter((dispose) => typeof dispose === "function");
             return () => { for (const dispose of disposers) dispose(); };
         }, "utility-appearance-kit: appearance routes");
