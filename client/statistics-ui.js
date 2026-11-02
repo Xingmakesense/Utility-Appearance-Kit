@@ -205,69 +205,65 @@
                     style: { "--uak-stats-height": `${bodyHeight}px` }
                 },
                     h("div", { className: "uak-statsFrame" },
-                        h("header", { className: "uak-statsHeader" },
-                            h("div", { className: "uak-statsDateControls" },
-                                h("div", { className: "uak-statsYear" },
-                                    h("button", {
-                                        type: "button",
-                                        className: "uak-statsIconButton",
-                                        "aria-label": uakStatsT("stats.prevYear"),
-                                        disabled: previousYear === undefined,
-                                        onClick: () => chooseYear(previousYear)
-                                    }, "‹"),
-                                    h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
-                                    h("button", {
-                                        type: "button",
-                                        className: "uak-statsIconButton",
-                                        "aria-label": uakStatsT("stats.nextYear"),
-                                        disabled: nextYear === undefined,
-                                        onClick: () => chooseYear(nextYear)
-                                    }, "›")
-                                ),
-                                h("div", { className: "uak-statsMonthLabel" },
-                                    range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint"))
-                            ),
+                        h("header", { className: "uak-statsTopline" },
+                            h("div", { className: "uak-statsTabs", role: "tablist", "aria-label": uakStatsT("stats.tabs") },
+                                [["overview", uakStatsT("stats.tab.overview")], ["models", uakStatsT("stats.tab.models")]].map(([id, label]) => h("button", {
+                                    key: id,
+                                    type: "button",
+                                    role: "tab",
+                                    id: `uak-stats-tab-${id}`,
+                                    className: "uak-statsTab",
+                                    "aria-selected": tab === id,
+                                    "aria-controls": `uak-stats-tabpanel-${id}`,
+                                    onClick: () => setTab(id)
+                                }, label))),
                             h("div", { className: "uak-statsRanges", role: "group", "aria-label": uakStatsT("stats.rangeGroup") },
                                 ["month", "all", "30d", "7d"].map((id) => h("button", {
                                     key: id,
                                     type: "button",
                                     className: "uak-statsRange",
                                     "aria-pressed": range === id,
-                                    disabled: false,
                                     onClick: () => {
                                         setRange(id);
                                         if (id !== "month") setTab("overview");
                                     }
                                 }, uakStatsRangeLabel(id))))
                         ),
-                        uakStatsMonthTrack({
-                            year,
-                            month,
-                            hasData: hasMonthData,
-                            onSelect: (value) => {
-                                setMonth(value);
-                                setRange("month");
-                            },
-                            onKeyDown: onMonthKeyDown,
-                            rootProps: {
-                                ref: monthTrackRef,
-                                onPointerDown: onMonthPointerDown,
-                                onPointerMove: onMonthPointerMove,
-                                onPointerUp: onMonthPointerUp,
-                                onPointerCancel: onMonthPointerUp
-                            }
-                        }),
-                        h("div", { className: "uak-statsTabs", role: "tablist", "aria-label": uakStatsT("stats.tabs") },
-                            [["overview", uakStatsT("stats.tab.overview")], ["models", uakStatsT("stats.tab.models")]].map(([id, label]) => h("button", {
-                                key: id,
-                                type: "button",
-                                role: "tab",
-                                id: `uak-stats-tab-${id}`,
-                                className: "uak-statsTab",
-                                "aria-selected": tab === id,
-                                "aria-controls": `uak-stats-tabpanel-${id}`,
-                                onClick: () => setTab(id)
-                            }, label))
+                        h("div", { className: "uak-statsPeriod" },
+                            h("div", { className: "uak-statsYear" },
+                                h("button", {
+                                    type: "button",
+                                    className: "uak-statsIconButton",
+                                    "aria-label": uakStatsT("stats.prevYear"),
+                                    disabled: previousYear === undefined,
+                                    onClick: () => chooseYear(previousYear)
+                                }, "‹"),
+                                h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
+                                h("button", {
+                                    type: "button",
+                                    className: "uak-statsIconButton",
+                                    "aria-label": uakStatsT("stats.nextYear"),
+                                    disabled: nextYear === undefined,
+                                    onClick: () => chooseYear(nextYear)
+                                }, "›")),
+                            h("span", { className: "uak-statsMonthLabel" }, range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint")),
+                            uakStatsMonthTrack({
+                                year,
+                                month,
+                                hasData: hasMonthData,
+                                onSelect: (value) => {
+                                    setMonth(value);
+                                    setRange("month");
+                                },
+                                onKeyDown: onMonthKeyDown,
+                                rootProps: {
+                                    ref: monthTrackRef,
+                                    onPointerDown: onMonthPointerDown,
+                                    onPointerMove: onMonthPointerMove,
+                                    onPointerUp: onMonthPointerUp,
+                                    onPointerCancel: onMonthPointerUp
+                                }
+                            })
                         ),
                         h("div", { className: "uak-statsBody" },
                             request.status === "loading" && summary === null
@@ -301,25 +297,25 @@
                                                     },
                                                         uakStatsMetricCards(current.metrics, number),
                                                         h("div", { className: "uak-statsContent" },
-                                                            uakStatsHeatmap({
-                                                                year,
-                                                                month,
-                                                                levels: heatmap.levels,
-                                                                cells: sourceCells,
-                                                                formatValue: number
-                                                            }),
-                                                            h("section", null,
-                                                                h("h2", { className: "uak-statsSectionTitle" },
-                                                                    `${rangeLabel} · ${uakStatsT("stats.bookSection")}`),
+                                                            h("div", { className: "uak-statsHeatScroll" },
+                                                                uakStatsHeatmap({
+                                                                    year,
+                                                                    month,
+                                                                    levels: heatmap.levels,
+                                                                    cells: sourceCells,
+                                                                    formatValue: number
+                                                                })
+                                                            ),
+                                                            h("div", { className: "uak-statsFooter" },
                                                                 uakStatsBookComparison({
                                                                     book,
                                                                     mode,
                                                                     tokens: current.tokens,
                                                                     range,
                                                                     units,
-                                                                    formatNumber: number,
-                                                                    legend: uakStatsLegend(heatmap.legends)
-                                                                })
+                                                                    formatNumber: number
+                                                                }),
+                                                                uakStatsLegend(heatmap.legends)
                                                             )
                                                         )
                                                     )

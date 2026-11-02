@@ -63,7 +63,7 @@ const child = { configEditor: editor, on, effect: (fn) => fn() };
 const web = {
     routes: [],
     register(route) {
-        if (!["/utility-appearance-kit/holidays.json", "/utility-appearance-kit/usage", "/utility-appearance-kit"].includes(route.path)) throw new Error("unexpected plugin route");
+        if (!["/utility-appearance-kit/holidays.json", "/utility-appearance-kit/usage", "/utility-appearance-kit/settings", "/utility-appearance-kit/asset", "/utility-appearance-kit/asset/"].includes(route.path)) throw new Error("unexpected plugin route");
         this.routes.push(route.path);
         return () => {};
     },

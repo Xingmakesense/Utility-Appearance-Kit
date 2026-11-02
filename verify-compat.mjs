@@ -62,7 +62,8 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "verify-client.mjs",
     "verify-compat.mjs",
     "verify-features.mjs",
-    "verify-usage.mjs"
+    "verify-usage.mjs",
+    "verify-routes.mjs"
 ]) {
         assert.equal(manifest.files.includes(file), true, file + " must stay in the packed files");
     }

@@ -1,6 +1,6 @@
 {
   "name": "utility-appearance-kit",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示、图片壁纸、液态/磨砂玻璃与月度书卷统计。 · Reasoning controls, image wallpaper, layered glass, and monthly usage statistics.",
   "type": "module",
   "main": "host.js",
@@ -58,7 +58,8 @@
     "verify-client.mjs",
     "verify-compat.mjs",
     "verify-features.mjs",
-    "verify-usage.mjs"
+    "verify-usage.mjs",
+    "verify-routes.mjs"
   ],
   "dsh": {
     "bundle": {
@@ -71,7 +72,7 @@
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check": "node scripts/build-client.mjs --check && node --check client.js && node --check host.js && node --check host/options.js && node --check host/declarations.js && node --check host/holiday.js && node --check host/status.js && node --check holiday-calendar.js && node --check scripts/build-client.mjs",
-    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs && node verify-features.mjs && node verify-usage.mjs"
+    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs && node verify-features.mjs && node verify-usage.mjs && node verify-routes.mjs"
   },
   "engines": {
     "dsh": ">=0.2.1-rc.2"

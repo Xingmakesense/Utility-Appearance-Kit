@@ -13,9 +13,10 @@ node verify-client.mjs
 node verify-compat.mjs
 node verify-features.mjs
 node verify-usage.mjs
+node verify-routes.mjs
 ```
 
-以上 7 个验证脚本全部通过后再上传。
+以上 8 个验证脚本全部通过后再上传。
 
 ## 创建仓库
 
@@ -39,11 +40,11 @@ node scripts/build-client.mjs
 pnpm pack --pack-destination dist
 ```
 
-将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.1.0`，建议标签 `v2.1.0`：
+将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.1.1`，建议标签 `v2.1.1`：
 
 ```bash
-git tag -a v2.1.0 -m "2.1.0"
-git push origin v2.1.0
+git tag -a v2.1.1 -m "2.1.1"
+git push origin v2.1.1
 ```
 
 ## 必须排除

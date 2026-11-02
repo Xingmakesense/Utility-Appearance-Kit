@@ -70,13 +70,15 @@
         function uakMountSettings(ctx) {
             const page = uakCreateSettingsPage();
             const locale = "utility-appearance-kit/settings";
-            if (ctx.locale?.register) ctx.effect(() => ctx.locale.register(locale, { zh: { nav: "外观与月度书卷" }, en: { nav: "Appearance & Monthly Books" } }), locale);
             const navLabel = () => {
                 try {
                     if (typeof ctx.locale?.bind === "function") return ctx.locale.bind(locale)("nav");
                 } catch { /* local language fallback */ }
                 return uakTr("外观与月度书卷", "Appearance & Monthly Books");
             };
+            // Register the visible section before any optional localization. A
+            // duplicate dictionary (HMR, two profiles in one page) must never
+            // remove the only entry point to these settings.
             ctx.slots.inject("settings.section", () => ctx.slots.register({
                 name: "settings.section", id: "utility-appearance-kit", order: 2,
                 label: navLabel, locale,
@@ -85,5 +87,17 @@
                 if (typeof renderSlot !== "function") return null;
                 return renderSlot("settings.utility-appearance-kit.item", {});
             }));
-            ctx.slots.inject("settings.utility-appearance-kit.item", () => ctx.slots.register({ name: "settings.utility-appearance-kit.item", id: "appearance" }, page));
+            ctx.slots.inject("settings.utility-appearance-kit.item", () => ctx.slots.register({
+                name: "settings.utility-appearance-kit.item", id: "appearance"
+            }, page));
+            if (typeof ctx.locale?.register === "function" && typeof ctx.effect === "function") {
+                try {
+                    ctx.effect(() => ctx.locale.register(locale, {
+                        zh: { nav: "外观与月度书卷" },
+                        en: { nav: "Appearance & Monthly Books" }
+                    }), "utility-appearance-kit: settings dictionary");
+                } catch (error) {
+                    console.warn("[utility-appearance-kit] settings dictionary unavailable; section stays accessible", error);
+                }
+            }
         }

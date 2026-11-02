@@ -1461,25 +1461,25 @@ const UAK_SETTINGS_CSS = `
 .uak-settings-section { padding: 16px 0; border-bottom: .5px solid var(--dsw-alias-border-l2); }
 .uak-settings-section h2 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
 .uak-setting-url { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
-.uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: inherit; background: rgb(125 160 220 / .08); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; font: inherit; font-size: 12px; }
+.uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; font: inherit; font-size: 12px; }
 .uak-setting-choice { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 12px 0; }
 .uak-setting-choice > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
 .uak-setting-options { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
 .uak-chip { padding: 5px 11px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; font-size: 12px; }
-.uak-chip:hover { background: rgb(108 150 229 / .1); color: var(--dsw-alias-label-primary); }
-.uak-chip[data-active="true"] { background: rgb(88 137 230 / .18); border-color: rgb(139 177 255 / .22); color: #bcd4ff; }
+.uak-chip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.uak-chip[data-active="true"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 16%, transparent); border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 30%, transparent); color: var(--dsw-alias-label-primary); }
 .uak-setting-sliders { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 24px; }
 .uak-setting-slider { display: grid; grid-template-columns: 100px minmax(80px,1fr) 50px; gap: 10px; align-items: center; min-height: 36px; font-size: 12px; color: var(--dsw-alias-label-secondary); }
-.uak-setting-slider input { width: 100%; accent-color: #689fff; }
+.uak-setting-slider input { width: 100%; accent-color: var(--dsw-alias-state-business-primary); }
 .uak-setting-slider output { color: var(--dsw-alias-label-tertiary); text-align: right; font-variant-numeric: tabular-nums; }
 .uak-book-catalog { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin: 14px 0 20px; }
-.uak-book-option { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid rgb(148 177 232 / .12); border-radius: 9px; background: rgb(67 106 179 / .07); color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; }
+.uak-book-option { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; }
 .uak-book-option strong { font-size: 12px; font-weight: 500; }
 .uak-book-option span { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
-.uak-book-option[data-active="true"] { background: rgb(61 125 235 / .2); border-color: rgb(131 176 255 / .45); color: #d5e4ff; }
-.uak-book-option[aria-selected="true"] { box-shadow: inset 0 0 0 1px rgb(131 176 255 / .2); }
-.uak-save { display: block; width: 100%; padding: 10px 16px; border: 1px solid rgb(152 190 255 / .35); border-radius: 9px; background: #356fca; color: #fff; cursor: pointer; font: inherit; }
-.uak-save:hover { background: #427ddb; }
+.uak-book-option[data-active="true"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 13%, transparent); border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 34%, transparent); color: var(--dsw-alias-label-primary); }
+.uak-book-option[aria-selected="true"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent); }
+.uak-save { display: block; width: 100%; padding: 10px 16px; border: 1px solid transparent; border-radius: 9px; background: var(--dsw-alias-state-business-primary); color: var(--dsw-alias-on-business-primary, #fff); cursor: pointer; font: inherit; }
+.uak-save:hover { filter: brightness(1.05); }
 .uak-save:disabled { opacity: .55; cursor: default; }
 .uak-save-message { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
 @media (max-width:650px) { .uak-setting-sliders { grid-template-columns: 1fr; } .uak-book-catalog { grid-template-columns: repeat(2,minmax(0,1fr)); } .uak-setting-choice { align-items: flex-start; } }
@@ -2119,8 +2119,8 @@ const UAK_SETTINGS_CSS = `
     box-sizing: border-box;
     width: calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
     max-width: var(--dsh-composer-card-max-width, 100%);
-    margin: 0 auto 10px;
-    color: var(--dsw-alias-label-primary, #172033);
+    margin: 0 auto 12px;
+    color: var(--dsw-alias-label-primary);
     font: inherit;
     font-size: 13px;
     line-height: 1.5;
@@ -2128,139 +2128,135 @@ const UAK_SETTINGS_CSS = `
 .uak-stats *, .uak-stats *::before, .uak-stats *::after { box-sizing: border-box; }
 .uak-stats button { font: inherit; }
 .uak-statsFrame {
-    padding: 18px;
-    border: 1px solid rgb(147 197 253 / 48%);
-    border-radius: 16px;
-    background: linear-gradient(135deg,
-        rgb(219 234 254 / var(--uak-card-alpha, .58)),
-        rgb(147 197 253 / var(--uak-card-alpha, .58)));
-    -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px));
-    backdrop-filter: blur(var(--uak-glass-blur, 18px));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
+    padding: 16px 20px 15px;
+    border: 1px solid var(--dsw-alias-border-l2);
+    border-radius: 18px;
+    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
 }
-.uak-statsHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.uak-statsDateControls { min-width: 0; }
-.uak-statsYear { display: flex; align-items: center; gap: 7px; height: 28px; }
-.uak-statsYearLabel { min-width: 58px; font-size: 15px; font-weight: 650; text-align: center; }
-.uak-statsMonthLabel { margin: 5px 0 0 31px; color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; }
+.uak-statsTopline { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.uak-statsTabs { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; }
+.uak-statsTab {
+    padding: 3px 0; border: 0; border-bottom: 2px solid transparent;
+    background: transparent; color: var(--dsw-alias-label-tertiary);
+    cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.uak-statsTab[aria-selected="true"] {
+    color: var(--dsw-alias-label-primary);
+    border-bottom-color: var(--dsw-alias-label-primary);
+}
+.uak-statsRanges { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.uak-statsRange {
+    min-width: 34px; padding: 3px 6px; border: 0; border-radius: 6px;
+    background: transparent; color: var(--dsw-alias-label-tertiary);
+    cursor: pointer; font-size: 12px; white-space: nowrap;
+}
+.uak-statsRange[aria-pressed="true"] { background: var(--dsw-alias-fill-secondary); color: var(--dsw-alias-label-primary); font-weight: 600; }
+.uak-statsRange:hover { color: var(--dsw-alias-label-primary); }
+.uak-statsPeriod { display: flex; align-items: center; gap: 7px; margin-top: 8px; min-width: 0; }
+.uak-statsYear { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.uak-statsYearLabel { min-width: 50px; color: var(--dsw-alias-label-secondary); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .uak-statsIconButton {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 25px; height: 25px; padding: 0; border: 0; border-radius: 7px;
-    background: transparent; color: var(--dsw-alias-label-secondary, #64748b); cursor: pointer;
+    width: 20px; height: 22px; padding: 0; border: 0; border-radius: 5px;
+    background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer;
 }
-.uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, #eff6ff); color: #2563eb; }
-.uak-statsIconButton:disabled { opacity: .28; cursor: default; }
-.uak-statsIconButton:focus-visible, .uak-statsMonth:focus-visible, .uak-statsRange:focus-visible {
-    outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 2px;
+.uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.uak-statsIconButton:disabled { opacity: .3; cursor: default; }
+.uak-statsIconButton:focus-visible, .uak-statsMonth:focus-visible, .uak-statsRange:focus-visible, .uak-statsTab:focus-visible {
+    outline: 2px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: 2px;
 }
-.uak-statsRanges { display: flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgb(191 219 254 / 32%); }
-.uak-statsTabs { display: flex; gap: 18px; margin: 0 0 12px; border-bottom: 1px solid rgb(147 197 253 / 40%); }
-.uak-statsTab { padding: 7px 1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #1e40af; cursor: pointer; }
-.uak-statsTab[aria-selected="true"] { border-bottom-color: #2563eb; color: #172554; font-weight: 650; }
-.uak-statsBody { height: var(--uak-stats-height, 360px); min-height: 0; overflow: auto; padding-right: 3px; }
-.uak-statsBody [role="tabpanel"] { min-height: 0; }
-.uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2, #e2e8f0); border-radius: 10px; }
-.uak-statsModelRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(70px, auto); gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l2, #e2e8f0); }
-.uak-statsModelRow:last-child { border-bottom: 0; }
-.uak-statsModelRowHead { background: rgb(191 219 254 / 32%); color: #1e3a8a; font-size: 11px; }
-.uak-statsModelRow > :not(:first-child) { text-align: right; }
-.uak-statsRange {
-    height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent;
-    color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; cursor: pointer; white-space: nowrap;
-}
-.uak-statsRange[aria-pressed="true"] { background: rgb(147 197 253 / 42%); color: #172554; box-shadow: 0 1px 4px rgb(15 23 42 / 10%); }
-.uak-statsRange:disabled { opacity: .4; cursor: not-allowed; }
+.uak-statsMonthLabel { color: var(--dsw-alias-label-tertiary); font-size: 12px; white-space: nowrap; }
 .uak-statsMonths {
-    position: relative; display: grid; grid-template-columns: repeat(12, minmax(22px, 1fr));
-    align-items: center; gap: 0; width: 100%; min-width: 300px; margin: 18px 0 16px;
+    position: relative; display: grid; grid-template-columns: repeat(12, minmax(18px, 1fr));
+    align-items: start; gap: 0; flex: 1; min-width: 180px; max-width: 520px; padding-top: 2px;
     touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .uak-statsMonths::before {
-    content: ""; position: absolute; left: 4.16%; right: 4.16%; top: 10px; height: 1px;
-    background: var(--dsw-alias-border-l2, #dbe3ef); pointer-events: none;
+    content: ""; position: absolute; left: 4%; right: 4%; top: 8px; height: 1px;
+    background: var(--dsw-alias-border-l2); pointer-events: none;
 }
 .uak-statsMonth {
-    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-    min-width: 0; padding: 3px 0; border: 0; background: transparent;
-    color: var(--dsw-alias-label-caption, #94a3b8); font-size: 10px; cursor: pointer;
+    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    min-width: 0; padding: 2px 0; border: 0; background: transparent;
+    color: var(--dsw-alias-label-tertiary); font-size: 9px; cursor: pointer;
 }
 .uak-statsMonthDot {
-    display: block; width: 15px; height: 15px; border: 4px solid var(--dsw-alias-bg-primary, #fff);
-    border-radius: 50%; background: #cbd5e1; box-shadow: 0 0 0 1px transparent;
+    display: block; width: 11px; height: 11px; border: 3px solid var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+    border-radius: 50%; background: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
 }
-.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
-.uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; font-weight: 650; }
-.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
-.uak-statsMetrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
-.uak-statsMetric { min-width: 0; padding: 11px 10px; border-radius: 10px; background: rgb(191 219 254 / 30%); }
-.uak-statsMetricLabel { overflow: hidden; color: #1e40af; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsMetricValue { margin-top: 4px; overflow: hidden; color: #172554; font-size: 19px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsContent { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); gap: 20px; align-items: start; }
-.uak-statsSectionTitle { margin: 0 0 10px; color: var(--dsw-alias-label-secondary, #64748b); font-size: 12px; font-weight: 600; }
-.uak-statsHeatScroll { overflow-x: auto; max-width: 100%; padding: 1px 1px 7px; }
+.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: var(--dsw-alias-state-business-primary); opacity: .55; }
+.uak-statsMonth[aria-pressed="true"] { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: var(--dsw-alias-state-business-primary); opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent); }
+.uak-statsBody { height: var(--uak-stats-height, 360px); min-height: 0; margin-top: 10px; overflow-y: auto; }
+.uak-statsMetrics {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--dsw-alias-border-l2);
+    border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+.uak-statsMetric { min-width: 0; padding: 12px 10px 11px 0; }
+.uak-statsMetric:nth-child(3n+2) { padding-left: 14px; }
+.uak-statsMetric:nth-child(3n) { padding-left: 14px; }
+.uak-statsMetric:nth-child(n+4) { border-top: 1px solid var(--dsw-alias-border-l2); }
+.uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 20px; line-height: 28px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uak-statsContent { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
+.uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
+.uak-statsHeatScroll { overflow-x: auto; max-width: 100%; padding: 0 0 5px; scrollbar-width: thin; }
 .uak-statsHeatGrid {
-    display: grid; grid-template-rows: repeat(7, 20px); grid-auto-flow: column;
-    grid-auto-columns: 20px; grid-auto-rows: 20px; gap: 3px; width: max-content;
+    display: grid; grid-template-rows: repeat(7, 18px); grid-auto-flow: column;
+    grid-auto-columns: 18px; grid-auto-rows: 18px; gap: 4px; width: max-content;
 }
-.uak-statsWeekday { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 9px; }
+.uak-statsWeekday { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--dsw-alias-label-caption, var(--dsw-alias-label-tertiary)); font-size: 9px; }
 .uak-statsDay {
-    display: block; flex: none; width: 20px; height: 20px; aspect-ratio: 1;
-    border-radius: 4px; background: var(--dsw-alias-fill-secondary, #e8edf3);
+    display: block; flex: none; width: 18px; height: 18px; aspect-ratio: 1;
+    border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
-.uak-statsDay[data-level="1"] { background: #dbeafe; }
-.uak-statsDay[data-level="2"] { background: #93c5fd; }
-.uak-statsDay[data-level="3"] { background: #60a5fa; }
-.uak-statsDay[data-level="4"] { background: #2563eb; }
-.uak-statsDay[data-level="5"] { background: #1e3a8a; }
-.uak-statsLegend { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 11px; margin-top: 8px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 10px; }
+.uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent); }
+.uak-statsDay[data-level="2"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 28%, transparent); }
+.uak-statsDay[data-level="3"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 46%, transparent); }
+.uak-statsDay[data-level="4"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 68%, transparent); }
+.uak-statsDay[data-level="5"] { background: var(--dsw-alias-state-business-primary); }
+.uak-statsLegend { display: flex; flex: 1; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
 .uak-statsLegendItem { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .uak-statsLegendSwatch { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 2px; }
 .uak-statsBook {
-    position: relative; overflow: hidden; padding: 17px; border: 1px solid rgb(255 255 255 / 45%);
-    border-radius: 15px; background: linear-gradient(135deg, rgb(96 165 250 / 27%), rgb(29 78 216 / 17%));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 8px 26px rgb(37 99 235 / 10%);
-    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    position: static; overflow: visible; padding: 0; border: 0;
+    background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px;
+    color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 19px;
 }
-.uak-statsBook::after {
-    content: ""; position: absolute; width: 130px; height: 130px; right: -48px; top: -54px;
-    border-radius: 50%; background: rgb(255 255 255 / 20%); pointer-events: none;
-}
-.uak-statsBookEyebrow { color: #1d4ed8; font-size: 10px; font-weight: 650; letter-spacing: .08em; }
-.uak-statsBookTitle { margin: 7px 0 1px; color: #172554; font-size: 22px; font-weight: 700; }
-.uak-statsBookEnglish { overflow: hidden; color: rgb(30 64 175 / 72%); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsBookDescription { margin: 13px 0 0; color: #1e3a8a; line-height: 1.8; }
-.uak-statsBookAmount { font-size: 18px; font-weight: 700; }
-.uak-statsBookRatio { margin-top: 5px; color: rgb(30 64 175 / 80%); font-size: 11px; }
-.uak-statsModels { margin-top: 15px; }
-.uak-statsModel { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--dsw-alias-border-l2, #e2e8f0); font-size: 11px; }
+.uak-statsBook::after { display: none; }
+.uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio { display: none; }
+.uak-statsBookTitle { margin: 0; color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; line-height: 19px; }
+.uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 19px; }
+.uak-statsBookAmount { color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; }
+.uak-statsModels { margin-top: 0; }
+.uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; }
+.uak-statsModelRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(70px, auto); gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l2); }
+.uak-statsModelRow:last-child { border-bottom: 0; }
+.uak-statsModelRowHead { background: var(--dsw-alias-fill-secondary); color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.uak-statsModelRow > :not(:first-child) { text-align: right; }
+.uak-statsModel { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--dsw-alias-border-l2); font-size: 12px; }
 .uak-statsModelId { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsModelValue { flex: none; color: var(--dsw-alias-label-secondary, #64748b); }
-.uak-statsStatus { padding: 26px 10px; color: var(--dsw-alias-label-secondary, #64748b); text-align: center; }
-.uak-statsError { color: var(--dsw-alias-state-danger-primary, #b91c1c); }
-.uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid currentColor; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
-.uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-caption, #94a3b8); font-size: 11px; }
-@media (prefers-color-scheme: dark) {
-    .uak-stats, .uak-statsYearLabel, .uak-statsMetricValue, .uak-statsMonth[aria-pressed="true"] { color: #dbeafe; }
-    .uak-statsMonthLabel, .uak-statsIconButton, .uak-statsSectionTitle, .uak-statsLegend,
-    .uak-statsWeekday, .uak-statsStatus, .uak-statsEmptyHint, .uak-statsModelValue { color: #bfdbfe; }
-    .uak-statsMetricLabel, .uak-statsTab, .uak-statsRange, .uak-statsModelRowHead,
-    .uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookDescription, .uak-statsBookRatio { color: #bfdbfe; }
-    .uak-statsBookTitle, .uak-statsRange[aria-pressed="true"], .uak-statsTab[aria-selected="true"] { color: #eff6ff; }
-    .uak-statsMetric, .uak-statsRanges, .uak-statsModelRowHead { background: rgb(30 64 175 / 36%); }
-}
-@media (max-width: 800px) {
-    .uak-statsContent { grid-template-columns: 1fr; }
-    .uak-statsMetrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .uak-statsHeader { flex-direction: column; }
-    .uak-statsRanges { align-self: flex-end; margin-top: -36px; }
-    .uak-statsMonths { min-width: 280px; }
-}
-@media (max-width: 480px) {
-    .uak-statsFrame { padding: 13px; }
-    .uak-statsMetrics { gap: 5px; }
-    .uak-statsMetric { padding: 8px; }
-    .uak-statsMetricValue { font-size: 16px; }
-    .uak-statsRange { padding: 0 7px; }
+.uak-statsModelValue { flex: none; color: var(--dsw-alias-label-secondary); font-variant-numeric: tabular-nums; }
+.uak-statsStatus { padding: 28px 10px; color: var(--dsw-alias-label-tertiary); text-align: center; font-size: 12px; }
+.uak-statsError { color: var(--dsw-alias-label-error, var(--dsw-alias-state-danger-primary)); }
+.uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.uak-statsFooter { display: flex; align-items: flex-start; gap: 16px; margin-top: 10px; }
+@media (max-width: 720px) {
+    .uak-statsFrame { padding: 14px; }
+    .uak-statsTopline { align-items: flex-start; }
+    .uak-statsTabs { gap: 14px; }
+    .uak-statsPeriod { flex-wrap: wrap; }
+    .uak-statsMonths { order: 3; flex-basis: 100%; max-width: none; }
+    .uak-statsMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .uak-statsMetric:nth-child(n) { padding-left: 0; }
+    .uak-statsMetric:nth-child(even) { padding-left: 14px; }
+    .uak-statsMetric:nth-child(n+3) { border-top: 1px solid var(--dsw-alias-border-l2); }
+    .uak-statsFooter { flex-direction: column; gap: 7px; }
+    .uak-statsLegend { justify-content: flex-start; }
 }
 `;
 
@@ -2338,41 +2334,36 @@ const UAK_SETTINGS_CSS = `
             const days = Array.isArray(cells) ? cells : [];
             const weekdays = uakStatsT("stats.weekdays");
             const monthParam = uakStatsMonthParam(month);
-            return h("section", null,
-                h("h2", { className: "uak-statsSectionTitle" }, uakStatsT("stats.heatTitle", { year, month: monthParam })),
-                h("div", { className: "uak-statsHeatScroll" },
-                    h("div", {
-                        className: "uak-statsHeatGrid",
-                        role: "img",
-                        "aria-label": uakStatsT("stats.heatAria", { year, month: monthParam })
-                    },
-                        weekdays.map((day, index) => h("span", {
-                            key: `${day}-${index}`,
-                            className: "uak-statsWeekday",
-                            "aria-hidden": "true"
-                        }, day)),
-                        shades.map((level, index) => {
-                            const cell = days[index];
-                            if (cell === undefined || cell.blank) {
-                                return h("span", {
-                                    key: cell?.key ?? `blank-${index}`,
-                                    className: "uak-statsDay",
-                                    style: { visibility: "hidden" }
-                                });
-                            }
-                            return h("span", {
-                                key: cell.key,
-                                className: "uak-statsDay",
-                                "data-level": level,
-                                title: uakStatsT("stats.cellTitle", {
-                                    date: cell.date,
-                                    tokens: format(cell.tokens),
-                                    messages: format(cell.messages)
-                                })
-                            });
+            return h("div", {
+                className: "uak-statsHeatGrid",
+                role: "img",
+                "aria-label": uakStatsT("stats.heatAria", { year, month: monthParam })
+            },
+                weekdays.map((day, index) => h("span", {
+                    key: `${day}-${index}`,
+                    className: "uak-statsWeekday",
+                    "aria-hidden": "true"
+                }, day)),
+                shades.map((level, index) => {
+                    const cell = days[index];
+                    if (cell === undefined || cell.blank) {
+                        return h("span", {
+                            key: cell?.key ?? `blank-${index}`,
+                            className: "uak-statsDay",
+                            style: { visibility: "hidden" }
+                        });
+                    }
+                    return h("span", {
+                        key: cell.key,
+                        className: "uak-statsDay",
+                        "data-level": level,
+                        title: uakStatsT("stats.cellTitle", {
+                            date: cell.date,
+                            tokens: format(cell.tokens),
+                            messages: format(cell.messages)
                         })
-                    )
-                )
+                    });
+                })
             );
         }
 
@@ -2660,69 +2651,65 @@ const UAK_SETTINGS_CSS = `
                     style: { "--uak-stats-height": `${bodyHeight}px` }
                 },
                     h("div", { className: "uak-statsFrame" },
-                        h("header", { className: "uak-statsHeader" },
-                            h("div", { className: "uak-statsDateControls" },
-                                h("div", { className: "uak-statsYear" },
-                                    h("button", {
-                                        type: "button",
-                                        className: "uak-statsIconButton",
-                                        "aria-label": uakStatsT("stats.prevYear"),
-                                        disabled: previousYear === undefined,
-                                        onClick: () => chooseYear(previousYear)
-                                    }, "‹"),
-                                    h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
-                                    h("button", {
-                                        type: "button",
-                                        className: "uak-statsIconButton",
-                                        "aria-label": uakStatsT("stats.nextYear"),
-                                        disabled: nextYear === undefined,
-                                        onClick: () => chooseYear(nextYear)
-                                    }, "›")
-                                ),
-                                h("div", { className: "uak-statsMonthLabel" },
-                                    range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint"))
-                            ),
+                        h("header", { className: "uak-statsTopline" },
+                            h("div", { className: "uak-statsTabs", role: "tablist", "aria-label": uakStatsT("stats.tabs") },
+                                [["overview", uakStatsT("stats.tab.overview")], ["models", uakStatsT("stats.tab.models")]].map(([id, label]) => h("button", {
+                                    key: id,
+                                    type: "button",
+                                    role: "tab",
+                                    id: `uak-stats-tab-${id}`,
+                                    className: "uak-statsTab",
+                                    "aria-selected": tab === id,
+                                    "aria-controls": `uak-stats-tabpanel-${id}`,
+                                    onClick: () => setTab(id)
+                                }, label))),
                             h("div", { className: "uak-statsRanges", role: "group", "aria-label": uakStatsT("stats.rangeGroup") },
                                 ["month", "all", "30d", "7d"].map((id) => h("button", {
                                     key: id,
                                     type: "button",
                                     className: "uak-statsRange",
                                     "aria-pressed": range === id,
-                                    disabled: false,
                                     onClick: () => {
                                         setRange(id);
                                         if (id !== "month") setTab("overview");
                                     }
                                 }, uakStatsRangeLabel(id))))
                         ),
-                        uakStatsMonthTrack({
-                            year,
-                            month,
-                            hasData: hasMonthData,
-                            onSelect: (value) => {
-                                setMonth(value);
-                                setRange("month");
-                            },
-                            onKeyDown: onMonthKeyDown,
-                            rootProps: {
-                                ref: monthTrackRef,
-                                onPointerDown: onMonthPointerDown,
-                                onPointerMove: onMonthPointerMove,
-                                onPointerUp: onMonthPointerUp,
-                                onPointerCancel: onMonthPointerUp
-                            }
-                        }),
-                        h("div", { className: "uak-statsTabs", role: "tablist", "aria-label": uakStatsT("stats.tabs") },
-                            [["overview", uakStatsT("stats.tab.overview")], ["models", uakStatsT("stats.tab.models")]].map(([id, label]) => h("button", {
-                                key: id,
-                                type: "button",
-                                role: "tab",
-                                id: `uak-stats-tab-${id}`,
-                                className: "uak-statsTab",
-                                "aria-selected": tab === id,
-                                "aria-controls": `uak-stats-tabpanel-${id}`,
-                                onClick: () => setTab(id)
-                            }, label))
+                        h("div", { className: "uak-statsPeriod" },
+                            h("div", { className: "uak-statsYear" },
+                                h("button", {
+                                    type: "button",
+                                    className: "uak-statsIconButton",
+                                    "aria-label": uakStatsT("stats.prevYear"),
+                                    disabled: previousYear === undefined,
+                                    onClick: () => chooseYear(previousYear)
+                                }, "‹"),
+                                h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
+                                h("button", {
+                                    type: "button",
+                                    className: "uak-statsIconButton",
+                                    "aria-label": uakStatsT("stats.nextYear"),
+                                    disabled: nextYear === undefined,
+                                    onClick: () => chooseYear(nextYear)
+                                }, "›")),
+                            h("span", { className: "uak-statsMonthLabel" }, range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint")),
+                            uakStatsMonthTrack({
+                                year,
+                                month,
+                                hasData: hasMonthData,
+                                onSelect: (value) => {
+                                    setMonth(value);
+                                    setRange("month");
+                                },
+                                onKeyDown: onMonthKeyDown,
+                                rootProps: {
+                                    ref: monthTrackRef,
+                                    onPointerDown: onMonthPointerDown,
+                                    onPointerMove: onMonthPointerMove,
+                                    onPointerUp: onMonthPointerUp,
+                                    onPointerCancel: onMonthPointerUp
+                                }
+                            })
                         ),
                         h("div", { className: "uak-statsBody" },
                             request.status === "loading" && summary === null
@@ -2756,25 +2743,25 @@ const UAK_SETTINGS_CSS = `
                                                     },
                                                         uakStatsMetricCards(current.metrics, number),
                                                         h("div", { className: "uak-statsContent" },
-                                                            uakStatsHeatmap({
-                                                                year,
-                                                                month,
-                                                                levels: heatmap.levels,
-                                                                cells: sourceCells,
-                                                                formatValue: number
-                                                            }),
-                                                            h("section", null,
-                                                                h("h2", { className: "uak-statsSectionTitle" },
-                                                                    `${rangeLabel} · ${uakStatsT("stats.bookSection")}`),
+                                                            h("div", { className: "uak-statsHeatScroll" },
+                                                                uakStatsHeatmap({
+                                                                    year,
+                                                                    month,
+                                                                    levels: heatmap.levels,
+                                                                    cells: sourceCells,
+                                                                    formatValue: number
+                                                                })
+                                                            ),
+                                                            h("div", { className: "uak-statsFooter" },
                                                                 uakStatsBookComparison({
                                                                     book,
                                                                     mode,
                                                                     tokens: current.tokens,
                                                                     range,
                                                                     units,
-                                                                    formatNumber: number,
-                                                                    legend: uakStatsLegend(heatmap.legends)
-                                                                })
+                                                                    formatNumber: number
+                                                                }),
+                                                                uakStatsLegend(heatmap.legends)
                                                             )
                                                         )
                                                     )
@@ -2896,13 +2883,15 @@ function uakCreateSettingsPage() {
         function uakMountSettings(ctx) {
             const page = uakCreateSettingsPage();
             const locale = "utility-appearance-kit/settings";
-            if (ctx.locale?.register) ctx.effect(() => ctx.locale.register(locale, { zh: { nav: "外观与月度书卷" }, en: { nav: "Appearance & Monthly Books" } }), locale);
             const navLabel = () => {
                 try {
                     if (typeof ctx.locale?.bind === "function") return ctx.locale.bind(locale)("nav");
                 } catch { /* local language fallback */ }
                 return uakTr("外观与月度书卷", "Appearance & Monthly Books");
             };
+            // Register the visible section before any optional localization. A
+            // duplicate dictionary (HMR, two profiles in one page) must never
+            // remove the only entry point to these settings.
             ctx.slots.inject("settings.section", () => ctx.slots.register({
                 name: "settings.section", id: "utility-appearance-kit", order: 2,
                 label: navLabel, locale,
@@ -2911,7 +2900,19 @@ function uakCreateSettingsPage() {
                 if (typeof renderSlot !== "function") return null;
                 return renderSlot("settings.utility-appearance-kit.item", {});
             }));
-            ctx.slots.inject("settings.utility-appearance-kit.item", () => ctx.slots.register({ name: "settings.utility-appearance-kit.item", id: "appearance" }, page));
+            ctx.slots.inject("settings.utility-appearance-kit.item", () => ctx.slots.register({
+                name: "settings.utility-appearance-kit.item", id: "appearance"
+            }, page));
+            if (typeof ctx.locale?.register === "function" && typeof ctx.effect === "function") {
+                try {
+                    ctx.effect(() => ctx.locale.register(locale, {
+                        zh: { nav: "外观与月度书卷" },
+                        en: { nav: "Appearance & Monthly Books" }
+                    }), "utility-appearance-kit: settings dictionary");
+                } catch (error) {
+                    console.warn("[utility-appearance-kit] settings dictionary unavailable; section stays accessible", error);
+                }
+            }
         }
         //#endregion
 

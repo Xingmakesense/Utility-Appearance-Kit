@@ -34,8 +34,8 @@ export function sanitizeAppearance(raw) {
         units: ["auto", "short", "myriad"].includes(value.units) ? value.units : "auto"
     };
 }
-function trusted(request, origin) {
-    if (request.headers["x-dsh-uak-settings"] !== "1") return false;
+function trusted(request, origin, requireMarker = true) {
+    if (requireMarker && request.headers["x-dsh-uak-settings"] !== "1") return false;
     if (request.headers["sec-fetch-site"] && !["same-origin", "none"].includes(request.headers["sec-fetch-site"])) return false;
     try {
         const requestOrigin = request.headers.origin;
@@ -82,17 +82,17 @@ export function installAppearance(ctx) {
     };
     ctx.inject(["webServer"], (scope) => {
         if (typeof scope.webServer?.register !== "function") return;
-        scope.effect(() => scope.webServer.register({
-            kind: "prefix", path: "/utility-appearance-kit",
-            handler: async (request, response) => {
+        const handle = async (request, response) => {
                 const url = new URL(request.url || "/", "http://localhost");
                 try {
-                    if (!trusted(request, () => scope.webServer.getOrigin?.() || "http://localhost")) return json(response, 403, { ok: false, message: "Request origin is not trusted" });
+                    if (!trusted(request, () => scope.webServer.getOrigin?.() || "http://localhost", request.method !== "GET" && request.method !== "HEAD")) return json(response, 403, { ok: false, message: "Request origin is not trusted" });
                     if (url.pathname === SETTINGS_PATH && request.method === "GET") return json(response, 200, { ok: true, value: read() });
                     if (url.pathname === SETTINGS_PATH && request.method === "POST") {
                         const body = JSON.parse((await bodyOf(request)).toString("utf8") || "{}");
                         const value = sanitizeAppearance(body);
-                        if (readFileSync(settingsPath, "utf8") === JSON.stringify(value, null, 2)) return json(response, 200, { ok: true, value });
+                        try {
+                            if (readFileSync(settingsPath, "utf8") === JSON.stringify(value, null, 2)) return json(response, 200, { ok: true, value });
+                        } catch { /* first save */ }
                         saveAtomic(settingsPath, value);
                         cachedSettings = value;
                         return json(response, 200, { ok: true, value });
@@ -129,10 +129,17 @@ export function installAppearance(ctx) {
                         return stream.pipe(response);
                     }
                     return json(response, 404, { ok: false, message: "Resource not found" });
-                } catch (error) {
+                } catch {
                     return json(response, 400, { ok: false, message: "Invalid or unwritable appearance data" });
                 }
-            }
-        }), "utility-appearance-kit: appearance routes");
+        };
+        scope.effect(() => {
+            const disposers = [
+                scope.webServer.register({ kind: "exact", path: SETTINGS_PATH, handler: handle }),
+                scope.webServer.register({ kind: "exact", path: "/utility-appearance-kit/asset", handler: handle }),
+                scope.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: handle })
+            ].filter((dispose) => typeof dispose === "function");
+            return () => { for (const dispose of disposers) dispose(); };
+        }, "utility-appearance-kit: appearance routes");
     });
 }
