@@ -40,11 +40,11 @@ node scripts/build-client.mjs
 pnpm pack --pack-destination dist
 ```
 
-将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.2.7`，建议标签 `v2.2.7`：
+将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.2.8`，建议标签 `v2.2.8`：
 
 ```bash
-git tag -a v2.2.7 -m "2.2.7"
-git push origin v2.2.7
+git tag -a v2.2.8 -m "2.2.8"
+git push origin v2.2.8
 ```
 
 ## 必须排除

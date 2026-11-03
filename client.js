@@ -20,7 +20,7 @@ const module = { exports: {} };
         }
 
         const name = "utility-appearance-kit";
-        const inject = ["slots"];
+        const inject = ["slots", "locale"];
         const sliderSlot = "conversation.input.right";
         //#endregion
 
@@ -1174,18 +1174,24 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
             return () => uakUiLocaleListeners.delete(listener);
         }
         function uakMountUiLocale(ctx) {
-            let previous = uakIsEnglish();
-            const check = () => {
-                const next = uakIsEnglish();
-                if (next === previous) return;
-                previous = next;
-                uakUiRevision += 1;
-                for (const listener of [...uakUiLocaleListeners]) listener(uakUiRevision);
-            };
-            const unsubscribe = typeof ctx?.locale?.subscribe === "function" ? ctx.locale.subscribe(check) : null;
-            const observer = new MutationObserver(check);
-            observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
-            return () => { observer.disconnect(); unsubscribe?.(); uakUiLocaleListeners.clear(); };
+            // ctx.locale is declared in `inject`, but a defensive wrapper keeps
+            // a locale glitch from ever blocking the appearance mount.
+            try {
+                let previous = uakIsEnglish();
+                const check = () => {
+                    const next = uakIsEnglish();
+                    if (next === previous) return;
+                    previous = next;
+                    uakUiRevision += 1;
+                    for (const listener of [...uakUiLocaleListeners]) listener(uakUiRevision);
+                };
+                const unsubscribe = typeof ctx?.locale?.subscribe === "function" ? ctx.locale.subscribe(check) : null;
+                const observer = new MutationObserver(check);
+                observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+                return () => { observer.disconnect(); unsubscribe?.(); uakUiLocaleListeners.clear(); };
+            } catch {
+                return () => {};
+            }
         }
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
@@ -3372,14 +3378,17 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
             } catch (error) {
                 console.warn("[utility-appearance-kit] top-bar actions skipped:", error);
             }
+            // The appearance mount must never share a try with the locale
+            // bridge: a locale failure used to swallow the effect registration
+            // and leave the wallpaper switched off for the whole session.
             try {
-                if (typeof ctx.effect === "function") {
-                    ctx.effect(() => uakMountUiLocale(ctx));
-                    ctx.effect(() => uakMountAppearance());
-                } else {
-                    uakMountAppearance();
-                }
+                if (typeof ctx.effect === "function") ctx.effect(() => uakMountAppearance());
+                else uakMountAppearance();
             } catch (error) { console.warn("[utility-appearance-kit] appearance unavailable:", error); }
+            try {
+                if (typeof ctx.effect === "function") ctx.effect(() => uakMountUiLocale(ctx));
+                else uakMountUiLocale(ctx);
+            } catch (error) { console.warn("[utility-appearance-kit] locale bridge unavailable:", error); }
             try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
             try {
                 if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));

@@ -15,5 +15,5 @@
         }
 
         const name = "utility-appearance-kit";
-        const inject = ["slots"];
+        const inject = ["slots", "locale"];
         const sliderSlot = "conversation.input.right";

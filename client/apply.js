@@ -108,14 +108,17 @@
             } catch (error) {
                 console.warn("[utility-appearance-kit] top-bar actions skipped:", error);
             }
+            // The appearance mount must never share a try with the locale
+            // bridge: a locale failure used to swallow the effect registration
+            // and leave the wallpaper switched off for the whole session.
             try {
-                if (typeof ctx.effect === "function") {
-                    ctx.effect(() => uakMountUiLocale(ctx));
-                    ctx.effect(() => uakMountAppearance());
-                } else {
-                    uakMountAppearance();
-                }
+                if (typeof ctx.effect === "function") ctx.effect(() => uakMountAppearance());
+                else uakMountAppearance();
             } catch (error) { console.warn("[utility-appearance-kit] appearance unavailable:", error); }
+            try {
+                if (typeof ctx.effect === "function") ctx.effect(() => uakMountUiLocale(ctx));
+                else uakMountUiLocale(ctx);
+            } catch (error) { console.warn("[utility-appearance-kit] locale bridge unavailable:", error); }
             try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
             try {
                 if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));

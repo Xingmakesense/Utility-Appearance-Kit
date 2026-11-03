@@ -8,18 +8,24 @@
             return () => uakUiLocaleListeners.delete(listener);
         }
         function uakMountUiLocale(ctx) {
-            let previous = uakIsEnglish();
-            const check = () => {
-                const next = uakIsEnglish();
-                if (next === previous) return;
-                previous = next;
-                uakUiRevision += 1;
-                for (const listener of [...uakUiLocaleListeners]) listener(uakUiRevision);
-            };
-            const unsubscribe = typeof ctx?.locale?.subscribe === "function" ? ctx.locale.subscribe(check) : null;
-            const observer = new MutationObserver(check);
-            observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
-            return () => { observer.disconnect(); unsubscribe?.(); uakUiLocaleListeners.clear(); };
+            // ctx.locale is declared in `inject`, but a defensive wrapper keeps
+            // a locale glitch from ever blocking the appearance mount.
+            try {
+                let previous = uakIsEnglish();
+                const check = () => {
+                    const next = uakIsEnglish();
+                    if (next === previous) return;
+                    previous = next;
+                    uakUiRevision += 1;
+                    for (const listener of [...uakUiLocaleListeners]) listener(uakUiRevision);
+                };
+                const unsubscribe = typeof ctx?.locale?.subscribe === "function" ? ctx.locale.subscribe(check) : null;
+                const observer = new MutationObserver(check);
+                observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+                return () => { observer.disconnect(); unsubscribe?.(); uakUiLocaleListeners.clear(); };
+            } catch {
+                return () => {};
+            }
         }
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
