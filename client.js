@@ -1317,7 +1317,29 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
-html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
+/* The sidebar keeps a tint only: putting backdrop-filter here would make it the
+   containing block for the host's position:fixed collapse toggle and push that
+   button out of the top strip. The blur lives on a pseudo layer instead. */
+html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] {
+  position: relative;
+  background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important;
+  border-color: rgb(255 255 255 / .05) !important;
+}
+html.uak-liquid [data-slot="sidebar"]::before,
+html.uak-liquid [class*='_sidebarCol']::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2);
+}
+.uak-no-blur [data-slot="sidebar"]::before,
+.uak-no-blur [class*='_sidebarCol']::before {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 /* L2 composer card: the real container is the composer seat's card. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card],
 html.uak-liquid [class*='_composerSeat'] [class*='_card'] {
