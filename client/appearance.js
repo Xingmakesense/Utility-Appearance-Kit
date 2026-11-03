@@ -46,6 +46,68 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
   background-image: none;
 }
 .uak-no-blur [data-slot="sidebar"], .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card], .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* Floating surfaces portalled to <body>: hover previews, session cards,
+   tooltips, popovers and dropdowns. They carry hashed module class names, so
+   match the stable role segments and exclude the leaf text/icon parts. */
+html.uak-liquid [role="tooltip"],
+html.uak-liquid [class*='_popover'], html.uak-liquid [class*='popover_'],
+html.uak-liquid [class*='_tooltip'], html.uak-liquid [class*='tooltip_'],
+html.uak-liquid [class*='_hoverCard'], html.uak-liquid [class*='hoverCard_'],
+html.uak-liquid [class*='_hoverPopup'], html.uak-liquid [class*='_flyout'],
+html.uak-liquid [class*='_dropdown'], html.uak-liquid [class*='dropdown_'],
+html.uak-liquid [class*='_previewPanel'], html.uak-liquid [class*='_previewPopover'],
+html.uak-liquid [class*='previewContent'], html.uak-liquid [class*='hoverContent'],
+html.uak-liquid [class*='_diffPreview'], html.uak-liquid [class*='diffPreview'],
+html.uak-liquid [data-radix-popper-content-wrapper],
+html.uak-liquid [data-floating-ui-portal] {
+  --dsw-alias-bg-base: rgba(18,18,20,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-1: rgba(24,24,27,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-2: rgba(30,30,34,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-3: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
+  --dsw-specific-sidebar-fill: rgba(22,22,24,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-module-platform: rgba(40,40,44,var(--uak-pop-alpha,1)) !important;
+  background-color: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
+  border: 1px solid rgb(255 255 255 / .1) !important;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .35) !important;
+  border-radius: 10px;
+}
+html.uak-liquid body:not([data-ds-dark-theme]) [role="tooltip"],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_popover'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='popover_'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_tooltip'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='tooltip_'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_hoverCard'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='hoverCard_'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_hoverPopup'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_flyout'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_dropdown'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='dropdown_'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_previewPanel'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_previewPopover'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='previewContent'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='hoverContent'],
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_diffPreview'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='diffPreview'],
+html.uak-liquid body:not([data-ds-dark-theme]) [data-radix-popper-content-wrapper],
+html.uak-liquid body:not([data-ds-dark-theme]) [data-floating-ui-portal] {
+  --dsw-alias-bg-base: rgba(250,251,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-1: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-2: rgba(246,249,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-3: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+  --dsw-specific-sidebar-fill: rgba(248,250,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-module-platform: rgba(226,236,250,var(--uak-pop-alpha,1)) !important;
+  background-color: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  border: 1px solid rgb(15 23 42 / .1) !important;
+  box-shadow: 0 16px 40px rgb(15 23 42 / .18) !important;
+}
+/* Keep leaf text and icons of those surfaces transparent. */
+html.uak-liquid [class*='hoverTitle'], html.uak-liquid [class*='hoverPath'],
+html.uak-liquid [class*='hoverTime'], html.uak-liquid [class*='hoverStatus'],
+html.uak-liquid [class*='hoverGlyph'], html.uak-liquid [class*='previewHint'],
+html.uak-liquid [class*='previewPath'], html.uak-liquid [class*='visuallyHidden'] {
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 `;
         let uakLastAppearance = null;
         let uakSkinNodes = null;
