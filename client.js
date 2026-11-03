@@ -1318,16 +1318,16 @@ html.uak-liquid body[data-ds-dark-theme] {
   --dsw-alias-bg-module-platform: rgb(59 79 111 / .48) !important;
   --dsw-specific-input-major: rgb(27 38 56 / var(--uak-input-alpha, .4)) !important;
 }
-#dsk-skin-root { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; background: #101724; }
-#dsk-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
-#dsk-skin-blur { position: absolute; inset: 0; pointer-events: none; }
+#uak-skin-root { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; background: #101724; }
+#uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
+#uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(ellipse at 18% 0%, rgb(113 153 220 / .08), transparent 48%),
               radial-gradient(ellipse at 88% 100%, rgb(92 93 164 / .07), transparent 50%);
   box-shadow: inset 0 1px rgb(255 255 255 / .05); }
 .uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card], .uak-liquid [data-taskboard],
 .uak-liquid [data-dsh-taskboard], .uak-liquid [data-context-panel],
-.uak-liquid [data-slot="sidebar.settings"] > *, .uak-liquid [data-shell-overlay="true"] [data-slot] > * {
+.uak-liquid [data-shell-overlay="true"] [data-slot] > * {
   backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
   -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
   border-color: rgb(213 229 255 / .13);
@@ -1341,9 +1341,13 @@ html.uak-liquid body[data-ds-dark-theme] {
   -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
 }
 @media (prefers-reduced-transparency: reduce), (prefers-reduced-motion: reduce) {
-  .uak-liquid [data-composer-card], .uak-liquid [role="dialog"], .uak-liquid [role="menu"] { backdrop-filter: none; }
+  .uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card],
+  .uak-liquid [data-taskboard], .uak-liquid [data-dsh-taskboard], .uak-liquid [data-context-panel],
+  .uak-liquid [data-shell-overlay="true"] [data-slot] > *,
+  .uak-liquid [role="dialog"], .uak-liquid [role="menu"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card],
+.uak-no-blur [data-taskboard], .uak-no-blur [data-dsh-taskboard], .uak-no-blur [data-context-panel],
 .uak-no-blur [data-shell-overlay="true"] [data-slot] > *, .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"],
 .uak-no-blur .uak-statsFrame, .uak-no-blur .uak-statsBook { backdrop-filter: none; -webkit-backdrop-filter: none; }
 `;
@@ -1357,15 +1361,15 @@ html.uak-liquid body[data-ds-dark-theme] {
             const root = document.documentElement;
             root.classList.add("uak-liquid");
             root.classList.toggle("uak-no-blur", cfg.glassBlur === 0 || cfg.opacity >= 98);
-            let layer = document.getElementById("dsk-skin-root");
+            let layer = document.getElementById("uak-skin-root");
             if (!layer) {
-                layer = document.createElement("div"); layer.id = "dsk-skin-root";
-                const media = document.createElement("div"); media.id = "dsk-skin-media";
-                const blur = document.createElement("div"); blur.id = "dsk-skin-blur";
+                layer = document.createElement("div"); layer.id = "uak-skin-root";
+                const media = document.createElement("div"); media.id = "uak-skin-media";
+                const blur = document.createElement("div"); blur.id = "uak-skin-blur";
                 layer.append(media, blur); document.body.prepend(layer);
             }
-            const media = layer.querySelector("#dsk-skin-media");
-            const blur = layer.querySelector("#dsk-skin-blur");
+            const media = layer.querySelector("#uak-skin-media");
+            const blur = layer.querySelector("#uak-skin-blur");
             media.textContent = "";
             media.style.backgroundImage = cfg.imageUrl ? `url("${cfg.imageUrl.replace(/["\\]/g, "\\$&")}")` : "";
             media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : cfg.imageMode;
