@@ -62,9 +62,18 @@ const trusted = { host: "127.0.0.1:49223", origin: "http://127.0.0.1:49223", "se
 let response = respond();
 await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: trusted }, response);
 assert.equal(response.status, 200, "trusted appearance settings request succeeds");
+// The desktop forwarder strips `host`/`origin`/`sec-fetch-site` before proxying,
+// so the guard keys off what survives: the private request marker and any
+// cross-site signals that are present. A foreign `Host` alone is not a signal.
 response = respond();
 await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: { host: "evil.example", "x-dsh-uak-settings": "1" } }, response);
-assert.equal(response.status, 403, "foreign settings requests are rejected");
+assert.equal(response.status, 200, "host alone is not trusted evidence either way");
+response = respond();
+await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: { ...trusted, origin: "https://evil.example" } }, response);
+assert.equal(response.status, 403, "foreign origins are rejected");
+response = respond();
+await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: { ...trusted, "sec-fetch-site": "cross-site" } }, response);
+assert.equal(response.status, 403, "cross-site requests are rejected");
 response = respond();
 await settingsRoute.handler({ method: "POST", url: "/utility-appearance-kit/settings", headers: { host: "127.0.0.1:49223", "sec-fetch-site": "same-origin" } }, response);
 assert.equal(response.status, 403, "writes still require the private request marker");

@@ -85,10 +85,15 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     assert.equal(client.includes("new MutationObserver"), true, "candidate-node observers must be present");
     assert.equal(client.includes("new MutationObserver(scan)"), false, "whole-document scans on every mutation are forbidden");
     assert.equal(client.includes("record.addedNodes.length"), true, "observers must inspect only additions");
-    assert.equal(client.includes('--dsw-specific-input-major: rgb(27 38 56 / var(--uak-input-alpha, .4)) !important'), true,
-        "dark theme must keep the wallpaper visible behind translucent surfaces");
-    assert.equal(client.includes('--dsw-alias-bg-base: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important'), true,
-        "light theme must keep the wallpaper visible behind translucent surfaces");
+    // Theme tokens moved from `rgb(... / var(--uak-*-alpha))` to the palette
+    // recipe since 3d7f60c; the invariant worth guarding is that surfaces stay
+    // translucent (alpha from a custom property), never an opaque fill.
+    assert.equal(client.includes("--dsw-alias-bg-base: rgba(18,18,20,var(--uak-pop-alpha,1)) !important"), true,
+        "popover surfaces must stay translucent so the wallpaper shows through");
+    assert.equal(client.includes("background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important"), true,
+        "the composer card must keep its alpha-driven translucent fill");
+    assert.match(client, /--dsw-alias-bg-(base|layer-[123]): rgba\(\d+,\d+,\d+,var\(--uak-(pop|surface|input)-alpha/,
+        "theme tokens must derive their alpha from a custom property");
     assert.equal(client.includes('const navLabel = () => uakTr("外观与月度书卷", "Appearance & Monthly Books")'), true,
         "settings navigation must never expose a raw locale key");
     assert.equal(client.includes("videoUrl"), false, "video wallpaper must stay removed");

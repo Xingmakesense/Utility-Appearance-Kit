@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 globalThis.__DSH_UAK_TEST__ = true;
 const makeElement = (tag = "div") => ({
-    tagName: tag.toUpperCase(), nodeType: 1, children: [], style: { setProperty() {} }, dataset: {},
+    tagName: tag.toUpperCase(), nodeType: 1, children: [], style: { setProperty() {}, removeProperty() {} }, dataset: {},
     classList: { add() {}, remove() {}, toggle() {} },
     append(...nodes) { this.children.push(...nodes); }, prepend(...nodes) { this.children.unshift(...nodes); },
     appendChild(node) { this.children.push(node); return node; },
@@ -185,13 +185,15 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
     };
     const nativeOnly = capture({ declarations: "off", slider: false });
     const requiredSlots = ["settings.section", "settings.utility-appearance-kit.item", "conversation.input.dock"];
-    assert.deepEqual(nativeOnly.injected, [["slots"]]);
+    // `locale` joined the inject list in 04dcad3 so the settings surface never
+    // prints a raw key; the slot list is what must not drift.
+    assert.deepEqual(nativeOnly.injected, [["slots", "locale"]]);
     assert.deepEqual(nativeOnly.slotKeys, [...requiredSlots, "sidebar.brand.name"]);
     const full = capture({});
-    assert.deepEqual(full.injected, [["slots", "modelDirectories", "sessions"]]);
+    assert.deepEqual(full.injected, [["slots", "locale", "modelDirectories", "sessions"]]);
     assert.deepEqual(full.slotKeys, [...requiredSlots, "conversation.input.right", "sidebar.brand.name"]);
     const invalid = capture({ slider: "invalid" });
-    assert.deepEqual(invalid.injected, [["slots"]]);
+    assert.deepEqual(invalid.injected, [["slots", "locale"]]);
     assert.deepEqual(invalid.slotKeys, [...requiredSlots, "sidebar.brand.name"]);
 }
 

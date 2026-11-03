@@ -160,7 +160,12 @@ assert.equal(defaults.bookMode, "random");
 assert.equal(defaults.bodyHeight, 360);
 assert.equal(defaults.glassBlur, 18);
 assert.equal(uakSanitizeSettings({ imageUrl: "javascript:alert(1)" }).imageUrl, "");
-assert.equal(uakSanitizeSettings({ blur: 500, glassBlur: -1, popupOpacity: 200 }).blur, 40);
+// The popover preference lives under `popBg` since 721527f; the flat keys are
+// gone, so clamping is asserted on the shape the UI actually reads.
+const clamped = uakSanitizeSettings({ glassBlur: -1, popBg: { blur: 500, alpha: -20 } });
+assert.equal(clamped.glassBlur, 0);
+assert.equal(clamped.popBg.blur, 40);
+assert.equal(clamped.popBg.alpha, 0);
 assert.equal(uakSanitizeSettings({ bookMode: "selected", bookTitle: "活着" }).bookTitle, "活着");
 
 for (const fn of ["uakStatsMonthTrack", "uakStatsHeatmap", "uakStatsMetricCards", "uakStatsBookComparison", "uakStatsModelTable", "uakStatsStatus"]) {
