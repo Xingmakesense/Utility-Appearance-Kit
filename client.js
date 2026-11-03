@@ -1190,9 +1190,9 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
         const UAK_DEFAULTS = Object.freeze({
-            imageUrl: "", imageMode: "cover", blur: 0, opacity: 0, scale: 0,
+            imageUrl: "", imageMode: "cover", blur: 0, opacity: 60, scale: 0,
             brightness: 100, contrast: 100, saturate: 100,
-            glassOpacity: 58, glassBlur: 18, popupOpacity: 86,
+            glassOpacity: 70, glassBlur: 18, popupOpacity: 86,
             bodyHeight: 360, bookMode: "random", bookTitle: "活着", units: "auto"
         });
         const uakClamp = (value, min, max, fallback) => {
@@ -1205,12 +1205,12 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                 imageUrl: typeof source.imageUrl === "string" && (/^https?:\/\//i.test(source.imageUrl) || /^\/(skin-master|utility-appearance-kit)\/asset\/[\w.-]+$/.test(source.imageUrl)) ? source.imageUrl.slice(0, 2048) : "",
                 imageMode: ["cover", "contain", "repeat"].includes(source.imageMode) ? source.imageMode : "cover",
                 blur: uakClamp(source.blur, 0, 40, 0),
-                opacity: uakClamp(source.opacity, 0, 100, 0),
+                opacity: uakClamp(source.opacity, 0, 100, 60),
                 scale: uakClamp(source.scale, -100, 100, 0),
                 brightness: uakClamp(source.brightness, 50, 150, 100),
                 contrast: uakClamp(source.contrast, 50, 150, 100),
                 saturate: uakClamp(source.saturate, 0, 200, 100),
-                glassOpacity: uakClamp(source.glassOpacity, 20, 95, 58),
+                glassOpacity: uakClamp(source.glassOpacity, 20, 95, 70),
                 glassBlur: uakClamp(source.glassBlur, 0, 40, 18),
                 popupOpacity: uakClamp(source.popupOpacity, 40, 100, 86),
                 bodyHeight: Math.round(uakClamp(source.bodyHeight, 300, 560, 360) / 4) * 4,
@@ -1297,6 +1297,7 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
 
         //#region client/appearance.js
 const UAK_GLASS_CSS = `
+/* L1: wallpaper and liquid colour wash. Neither layer intercepts input. */
 html.uak-liquid, html.uak-liquid body { background: transparent !important; }
 html.uak-liquid body #root, html.uak-liquid body #app { background: transparent !important; }
 html.uak-liquid,
@@ -1305,56 +1306,62 @@ html.uak-liquid[data-ds-light-theme],
 html.uak-liquid body,
 html.uak-liquid body[data-ds-dark-theme],
 html.uak-liquid body[data-ds-light-theme] {
-  --dsw-alias-bg-base: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-1: rgb(255 255 255 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-2: rgb(247 251 255 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-3: rgb(255 255 255 / var(--uak-popup-alpha, .86)) !important;
-  --dsw-specific-sidebar-fill: rgb(248 251 255 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-module-platform: rgb(219 234 254 / .48) !important;
-  --dsw-specific-input-major: rgb(255 255 255 / var(--uak-input-alpha, .4)) !important;
+  --dsw-alias-bg-base: transparent !important;
+  --dsw-alias-bg-layer-1: transparent !important;
+  --dsw-alias-bg-layer-2: transparent !important;
+  --dsw-alias-bg-layer-3: transparent !important;
+  --dsw-specific-sidebar-fill: transparent !important;
+  --dsw-alias-bg-module-platform: transparent !important;
 }
-html.uak-liquid[data-ds-dark-theme],
-html.uak-liquid body[data-ds-dark-theme] {
-  --dsw-alias-bg-base: rgb(16 23 36 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-1: rgb(31 40 57 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-2: rgb(37 48 68 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-layer-3: rgb(45 58 80 / var(--uak-popup-alpha, .86)) !important;
-  --dsw-specific-sidebar-fill: rgb(24 33 49 / var(--uak-surface-alpha, .12)) !important;
-  --dsw-alias-bg-module-platform: rgb(59 79 111 / .48) !important;
-  --dsw-specific-input-major: rgb(27 38 56 / var(--uak-input-alpha, .4)) !important;
+#uak-skin-root {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+  background: #0d1117;
 }
-#uak-skin-root { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; background: #101724; }
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
-.uak-liquid-wash { position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(ellipse at 18% 0%, rgb(113 153 220 / .08), transparent 48%),
-              radial-gradient(ellipse at 88% 100%, rgb(92 93 164 / .07), transparent 50%);
-  box-shadow: inset 0 1px rgb(255 255 255 / .05); }
-.uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card], .uak-liquid [data-taskboard],
-.uak-liquid [data-dsh-taskboard], .uak-liquid [data-context-panel],
-.uak-liquid [data-shell-overlay="true"] [data-slot] > * {
-  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
-  border-color: rgb(213 229 255 / .13);
-  box-shadow: inset 0 1px rgb(255 255 255 / .06), 0 12px 40px rgb(0 0 0 / .12);
+.uak-liquid-wash {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%),
+              radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%);
+  mix-blend-mode: overlay;
 }
-.uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card] { background-color: rgb(27 38 56 / var(--uak-input-alpha, .4)); }
-.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
-.uak-liquid [role="dialog"], .uak-liquid [role="menu"] {
-  background-color: rgb(32 43 62 / var(--uak-popup-alpha, .86));
-  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.12);
+
+/* L2: frosted sidebar, composer card, and explicit overlay surfaces. */
+html.uak-liquid [data-slot="sidebar"] {
+  background-color: rgb(20 25 35 / var(--uak-surface-alpha, .6)) !important;
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2) !important;
+  border-color: rgb(255 255 255 / .05) !important;
 }
-@media (prefers-reduced-transparency: reduce), (prefers-reduced-motion: reduce) {
-  .uak-liquid [data-composer-card], .uak-liquid [data-uak-glass-card],
-  .uak-liquid [data-taskboard], .uak-liquid [data-dsh-taskboard], .uak-liquid [data-context-panel],
-  .uak-liquid [data-shell-overlay="true"] [data-slot] > *,
-  .uak-liquid [role="dialog"], .uak-liquid [role="menu"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.uak-liquid [data-composer-card],
+html.uak-liquid [data-uak-glass-card] {
+  background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important;
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.15) !important;
+  border: 1px solid rgb(255 255 255 / .08) !important;
+  box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important;
 }
-.uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card],
-.uak-no-blur [data-taskboard], .uak-no-blur [data-dsh-taskboard], .uak-no-blur [data-context-panel],
-.uak-no-blur [data-shell-overlay="true"] [data-slot] > *, .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"],
-.uak-no-blur .uak-statsFrame, .uak-no-blur .uak-statsBook { backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
+html.uak-liquid [role="dialog"],
+html.uak-liquid [role="menu"] {
+  background-color: rgb(22 30 45 / var(--uak-popup-alpha, .85)) !important;
+  backdrop-filter: blur(calc(var(--uak-glass-blur, 18px) * 1.5)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(calc(var(--uak-glass-blur, 18px) * 1.5)) saturate(1.2) !important;
+  border: 1px solid rgb(255 255 255 / .1) !important;
+  box-shadow: 0 20px 40px rgb(0 0 0 / .4) !important;
+}
+
+/* L3: native controls, typography, and list items keep their own styles. */
+
+.uak-no-blur [data-slot="sidebar"],
+.uak-no-blur [data-composer-card],
+.uak-no-blur [data-uak-glass-card],
+.uak-no-blur [data-shell-overlay="true"] [data-slot] > *,
+.uak-no-blur [role="dialog"],
+.uak-no-blur [role="menu"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 `;
         let uakLastAppearance = null;
         function uakApplyAppearance(settings) {
@@ -1387,11 +1394,10 @@ html.uak-liquid body[data-ds-dark-theme] {
             media.style.filter = `brightness(${cfg.brightness}%) contrast(${cfg.contrast}%) saturate(${cfg.saturate}%)`;
             media.style.transform = `scale(${Math.max(10, 100 + cfg.scale) / 100})`;
             blur.style.backdropFilter = cfg.blur > 0 ? `blur(${cfg.blur}px)` : "none";
-            root.style.setProperty("--uak-surface-alpha", String(cfg.opacity / 100));
-            root.style.setProperty("--uak-input-alpha", ".4");
+            root.style.setProperty("--uak-surface-alpha", String(cfg.opacity / 100 || .6));
+            root.style.setProperty("--uak-input-alpha", String(cfg.glassOpacity / 100));
             root.style.setProperty("--uak-glass-blur", `${cfg.glassBlur}px`);
             root.style.setProperty("--uak-popup-alpha", String(cfg.popupOpacity / 100));
-            root.style.setProperty("--uak-card-alpha", String(cfg.glassOpacity / 100));
             root.style.setProperty("--uak-stats-height", `${cfg.bodyHeight}px`);
             if (!document.querySelector(".uak-liquid-wash")) {
                 const wash = document.createElement("div"); wash.className = "uak-liquid-wash";
@@ -1406,7 +1412,7 @@ html.uak-liquid body[data-ds-dark-theme] {
             for (const editor of candidates) {
                 let node = editor.parentElement;
                 while (node && node !== document.body) {
-                    if (/card/i.test(String(node.className))) {
+                    if (/card|composer|editor/i.test(String(node.className))) {
                         if (node.dataset.uakGlassCard !== "true") node.dataset.uakGlassCard = "true";
                         break;
                     }

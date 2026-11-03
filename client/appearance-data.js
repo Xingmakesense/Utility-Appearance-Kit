@@ -24,9 +24,9 @@
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
         const UAK_DEFAULTS = Object.freeze({
-            imageUrl: "", imageMode: "cover", blur: 0, opacity: 0, scale: 0,
+            imageUrl: "", imageMode: "cover", blur: 0, opacity: 60, scale: 0,
             brightness: 100, contrast: 100, saturate: 100,
-            glassOpacity: 58, glassBlur: 18, popupOpacity: 86,
+            glassOpacity: 70, glassBlur: 18, popupOpacity: 86,
             bodyHeight: 360, bookMode: "random", bookTitle: "活着", units: "auto"
         });
         const uakClamp = (value, min, max, fallback) => {
@@ -39,12 +39,12 @@
                 imageUrl: typeof source.imageUrl === "string" && (/^https?:\/\//i.test(source.imageUrl) || /^\/(skin-master|utility-appearance-kit)\/asset\/[\w.-]+$/.test(source.imageUrl)) ? source.imageUrl.slice(0, 2048) : "",
                 imageMode: ["cover", "contain", "repeat"].includes(source.imageMode) ? source.imageMode : "cover",
                 blur: uakClamp(source.blur, 0, 40, 0),
-                opacity: uakClamp(source.opacity, 0, 100, 0),
+                opacity: uakClamp(source.opacity, 0, 100, 60),
                 scale: uakClamp(source.scale, -100, 100, 0),
                 brightness: uakClamp(source.brightness, 50, 150, 100),
                 contrast: uakClamp(source.contrast, 50, 150, 100),
                 saturate: uakClamp(source.saturate, 0, 200, 100),
-                glassOpacity: uakClamp(source.glassOpacity, 20, 95, 58),
+                glassOpacity: uakClamp(source.glassOpacity, 20, 95, 70),
                 glassBlur: uakClamp(source.glassBlur, 0, 40, 18),
                 popupOpacity: uakClamp(source.popupOpacity, 40, 100, 86),
                 bodyHeight: Math.round(uakClamp(source.bodyHeight, 300, 560, 360) / 4) * 4,

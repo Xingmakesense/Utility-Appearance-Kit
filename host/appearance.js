@@ -26,9 +26,9 @@ export function sanitizeAppearance(raw) {
     return {
         imageUrl: typeof value.imageUrl === "string" && (/^https?:\/\//i.test(value.imageUrl) || /^\/(skin-master|utility-appearance-kit)\/asset\/[\w.-]+$/.test(value.imageUrl)) ? value.imageUrl.slice(0, 2048) : "",
         imageMode: ["cover", "contain", "repeat"].includes(value.imageMode) ? value.imageMode : "cover",
-        blur: clamp(value.blur, 0, 40, 0), opacity: clamp(value.opacity, 0, 100, 0), scale: clamp(value.scale, -100, 100, 0),
+        blur: clamp(value.blur, 0, 40, 0), opacity: clamp(value.opacity, 0, 100, 60), scale: clamp(value.scale, -100, 100, 0),
         brightness: clamp(value.brightness, 50, 150, 100), contrast: clamp(value.contrast, 50, 150, 100), saturate: clamp(value.saturate, 0, 200, 100),
-        glassOpacity: clamp(value.glassOpacity, 20, 95, 58), glassBlur: clamp(value.glassBlur, 0, 40, 18), popupOpacity: clamp(value.popupOpacity, 40, 100, 86),
+        glassOpacity: clamp(value.glassOpacity, 20, 95, 70), glassBlur: clamp(value.glassBlur, 0, 40, 18), popupOpacity: clamp(value.popupOpacity, 40, 100, 86),
         bodyHeight: Math.round(clamp(value.bodyHeight, 300, 560, 360) / 4) * 4,
         bookMode: value.bookMode === "selected" ? "selected" : "random",
         bookTitle: typeof value.bookTitle === "string" ? value.bookTitle.slice(0, 100) : "活着",
