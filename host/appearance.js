@@ -38,18 +38,29 @@ export function sanitizeAppearance(raw) {
         units: ["auto", "short", "myriad"].includes(value.units) ? value.units : "auto"
     };
 }
+// Desktop windows load the page from the `dsh-app://app` custom protocol and
+// forward every other path to this web server. That forwarder strips `host`,
+// `origin`, and `sec-fetch-site` before proxying, so the previous host-based
+// check rejected every request coming from the real app window (the HTTP port
+// still answered 200, which hid the bug). Keep the same-origin intent without
+// depending on a header the desktop forwarder removes.
 function trusted(request, origin, requireMarker = true) {
     if (requireMarker && request.headers["x-dsh-uak-settings"] !== "1") return false;
-    if (request.headers["sec-fetch-site"] && !["same-origin", "none"].includes(request.headers["sec-fetch-site"])) return false;
-    try {
-        const requestOrigin = request.headers.origin;
-        if (requestOrigin && new URL(requestOrigin).host !== new URL(origin()).host) return false;
-    } catch { return false; }
+    const site = request.headers["sec-fetch-site"];
+    if (site && !["same-origin", "none"].includes(site)) return false;
+    const requestOrigin = request.headers.origin;
+    if (!requestOrigin) return true;
+    if (requestOrigin === "dsh-app://app" || requestOrigin === "null") return true;
     try {
         const own = new URL(origin());
-        const host = new URL(`http://${request.headers.host}`);
-        return host.host === own.host || (["localhost", "127.0.0.1"].includes(host.hostname) && ["localhost", "127.0.0.1"].includes(own.hostname) && host.port === own.port);
-    } catch { return false; }
+        const supplied = new URL(requestOrigin);
+        if (supplied.protocol === "dsh-app:") return true;
+        if (supplied.host === own.host) return true;
+        return ["localhost", "127.0.0.1"].includes(supplied.hostname)
+            && ["localhost", "127.0.0.1"].includes(own.hostname);
+    } catch {
+        return false;
+    }
 }
 function json(response, status, value) {
     const body = Buffer.from(JSON.stringify(value));
