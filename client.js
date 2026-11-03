@@ -1189,35 +1189,23 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
         }
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
-        // Reference: SKIN_DEFAULTS. Nested defaults are cloned before use.
         const UAK_DEFAULTS = Object.freeze({
-            imageUrl: "", videoUrl: "", imageMode: "cover", blur: 0, opacity: 0, scale: 0,
+            imageUrl: "", imageMode: "cover", blur: 0, opacity: 0, scale: 0,
             brightness: 100, contrast: 100, saturate: 100,
-            videoMuted: true, videoVolume: 50,
             glassOpacity: 70, glassBlur: 18,
             popBg: Object.freeze({ alpha: 40, blur: 10, grain: 5 }),
-            inputBg: Object.freeze({ enabled: false, imageUrl: "", mode: "fill", transition: 55, posX: 50, posY: 50, blur: 0, opacity: 100, inputOpacity: 100, scale: 0 }),
-            inputBox: Object.freeze({ bgColor: "", textColor: "", opacity: 100, blur: 0 }),
-            chatColor: "",
-            chatFont: Object.freeze({ aiBold: false, userBold: false, aiShadow: false, userShadow: false, weight: 700, shadowColor: "#000000", shadowStrength: 100, shadowBlur: 3, shadowX: 0, shadowY: 1 }),
             bodyHeight: 360, bookMode: "random", bookTitle: "活着", units: "auto"
         });
         const uakClamp = (value, min, max, fallback) => {
             const number = Number(value);
             return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
         };
-        const uakBool = (value, fallback) => typeof value === "boolean" ? value : fallback;
-        const uakColor = (value) => typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value) ? value : "";
         const uakMediaUrl = (value) => typeof value === "string" && (/^https?:\/\//i.test(value) || /^\/(skin-master|utility-appearance-kit)\/asset\/[\w.-]+$/.test(value)) ? value.slice(0, 2048) : "";
         function uakSanitizeSettings(raw) {
             const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
             const pop = source.popBg && typeof source.popBg === "object" ? source.popBg : {};
-            const input = source.inputBg && typeof source.inputBg === "object" ? source.inputBg : {};
-            const box = source.inputBox && typeof source.inputBox === "object" ? source.inputBox : {};
-            const font = source.chatFont && typeof source.chatFont === "object" ? source.chatFont : {};
             return {
                 imageUrl: uakMediaUrl(source.imageUrl),
-                videoUrl: uakMediaUrl(source.videoUrl),
                 imageMode: ["cover", "contain", "repeat"].includes(source.imageMode) ? source.imageMode : "cover",
                 blur: uakClamp(source.blur, 0, 40, 0),
                 opacity: uakClamp(source.opacity, 0, 100, 0),
@@ -1225,27 +1213,12 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                 brightness: uakClamp(source.brightness, 50, 150, 100),
                 contrast: uakClamp(source.contrast, 50, 150, 100),
                 saturate: uakClamp(source.saturate, 0, 200, 100),
-                videoMuted: uakBool(source.videoMuted, true),
-                videoVolume: uakClamp(source.videoVolume, 0, 100, 50),
                 glassOpacity: uakClamp(source.glassOpacity, 20, 95, 70),
                 glassBlur: uakClamp(source.glassBlur, 0, 40, 18),
                 popBg: {
                     alpha: uakClamp(pop.alpha, 0, 100, 40),
                     blur: uakClamp(pop.blur, 0, 40, 10),
                     grain: uakClamp(pop.grain, 0, 100, 5)
-                },
-                inputBg: {
-                    enabled: uakBool(input.enabled, false), imageUrl: uakMediaUrl(input.imageUrl),
-                    mode: ["fill", "fit", "stretch", "repeat", "center", "cross"].includes(input.mode) ? input.mode : "fill",
-                    transition: uakClamp(input.transition, 10, 90, 55), posX: uakClamp(input.posX, 0, 100, 50), posY: uakClamp(input.posY, 0, 100, 50),
-                    blur: uakClamp(input.blur, 0, 40, 0), opacity: uakClamp(input.opacity, 0, 100, 100), inputOpacity: uakClamp(input.inputOpacity, 0, 100, 100), scale: uakClamp(input.scale, -100, 100, 0)
-                },
-                inputBox: { bgColor: uakColor(box.bgColor), textColor: uakColor(box.textColor), opacity: uakClamp(box.opacity, 0, 100, 100), blur: uakClamp(box.blur, 0, 40, 0) },
-                chatColor: uakColor(source.chatColor),
-                chatFont: {
-                    aiBold: uakBool(font.aiBold, false), userBold: uakBool(font.userBold, false), aiShadow: uakBool(font.aiShadow, false), userShadow: uakBool(font.userShadow, false),
-                    weight: uakClamp(font.weight, 400, 900, 700), shadowColor: uakColor(font.shadowColor) || "#000000", shadowStrength: uakClamp(font.shadowStrength, 0, 100, 100),
-                    shadowBlur: uakClamp(font.shadowBlur, 0, 20, 3), shadowX: uakClamp(font.shadowX, -10, 10, 0), shadowY: uakClamp(font.shadowY, -10, 10, 1)
                 },
                 bodyHeight: Math.round(uakClamp(source.bodyHeight, 300, 560, 360) / 4) * 4,
                 bookMode: source.bookMode === "selected" ? "selected" : "random",
@@ -1317,14 +1290,13 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
             });
             return uakSaveSequence;
         }
-        async function uakUploadMedia(file) {
+        async function uakUploadImage(file) {
             const name = `${Date.now().toString(36)}-${String(file.name || "wallpaper").replace(/[^A-Za-z0-9._-]/g, "_")}`;
             const response = await fetch("/utility-appearance-kit/asset?name=" + encodeURIComponent(name), { method: "POST", headers: { "content-type": file.type || "application/octet-stream", "x-dsh-uak-settings": "1" }, body: file });
             const result = await response.json().catch(() => ({}));
-            if (!response.ok || !result.url) throw new Error(result.message || "媒体保存失败");
+            if (!response.ok || !result.url) throw new Error(result.message || "图片保存失败");
             return result.url;
         }
-        async function uakUploadImage(file) { return uakUploadMedia(file); }
         function uakFetchUsage(options = {}) {
             return fetch(UAK_USAGE_PATH + (options.force ? "?refresh=1" : ""), {
                 headers: { accept: "application/json", "x-dsh-uak-usage": "1" }
@@ -1336,7 +1308,7 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
         //#endregion
 
         //#region client/appearance.js
-// Reference: skin-master cssText and applySkin token/background rules.
+// Reference: skin-master applySkin token rules and image wallpaper layer.
         const UAK_GLASS_CSS = `
 html.uak-liquid, html.uak-liquid body { background: transparent !important; }
 html.uak-liquid body #root, html.uak-liquid body #app { background: transparent !important; }
@@ -1359,8 +1331,8 @@ html.uak-liquid body[data-ds-light-theme] {
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
 html.uak-liquid:not(.uak-no-blur) body > div > div { backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.1); -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.1); }
 html.uak-liquid [data-slot="sidebar"] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
+/* L2 composer material is fixed; there is no input image configuration. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card] { background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; border: 1px solid rgb(255 255 255 / .08) !important; box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important; }
-/* Reference: applyPopBg and its opaque token restoration. */
 html.uak-liquid [role="dialog"], html.uak-liquid [role="menu"],
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
 html.uak-liquid [class*='_portal_'], html.uak-liquid [class*='_list_'], html.uak-liquid [class*='_menu'] {
@@ -1381,157 +1353,15 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
   opacity: var(--uak-pop-grain,0);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-/* Reference: applyInputBg / applyInputOpacity pseudo layers. */
-.uak-input-bg { position: relative !important; }
-.uak-input-bg::before { content: ""; position: absolute; inset: var(--uak-input-inset,0); background-image: var(--uak-input-img); background-size: var(--uak-input-size,cover); background-repeat: var(--uak-input-repeat,no-repeat); background-position: var(--uak-input-pos,50% 50%); filter: blur(var(--uak-input-blur,0px)); opacity: var(--uak-input-opacity,1); transform: scale(var(--uak-input-scale,1)); z-index: 0; pointer-events: none; border-radius: inherit; mask-image: var(--uak-input-mask,none); -webkit-mask-image: var(--uak-input-mask,none); }
-.uak-input-bg.uak-input-cross { overflow: visible !important; }
-.uak-input-bg.uak-input-cross::before { inset: -60%; }
-.uak-input-bg::after { content: ""; position: absolute; inset: 0; background-image: var(--uak-input-grad); z-index: 1; pointer-events: none; border-radius: inherit; }
-.uak-input-bg > * { position: relative; z-index: 2; }
-.uak-inputCard { position: relative !important; background-color: rgba(44,44,46,var(--uak-input-bg-alpha,1)) !important; backdrop-filter: blur(10px) !important; }
-/* Reference: applyInputBox / applyChatColor / applyChatFont CSS. */
-html.uak-liquid [class*='P5DUYG_bubble'], html.uak-liquid [class*='cJsG2q_bubble'] { background-color: var(--uak-inputbox-bg-rgba,rgba(44,44,46,1)) !important; color: var(--uak-inputbox-text,inherit) !important; backdrop-filter: blur(var(--uak-inputbox-blur,0px)) !important; font-weight: var(--uak-user-weight,inherit) !important; text-shadow: var(--uak-user-shadow,none) !important; }
-html.uak-liquid [class*='P5DUYG_bubble'] *, html.uak-liquid [class*='cJsG2q_bubble'] * { color: var(--uak-inputbox-text,inherit) !important; }
-html.uak-liquid [class*='kBm9Yq_body'], html.uak-liquid [class*='v5IAXa_body'], html.uak-liquid [class*='kBm9Yq_body'] *, html.uak-liquid [class*='v5IAXa_body'] * { color: var(--uak-chat-color,inherit) !important; }
-html.uak-liquid [class*='kBm9Yq_body'], html.uak-liquid [class*='v5IAXa_body'] { font-weight: var(--uak-chat-weight,inherit) !important; text-shadow: var(--uak-chat-shadow,none) !important; }
 .uak-no-blur [data-slot="sidebar"], .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card], .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 `;
         let uakLastAppearance = null;
         const uakCssUrlEscape = (value) => String(value).replace(/["\\]/g, "\\$&");
-        const uakHexToRgba = (hex, alpha) => {
-            if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return null;
-            const number = parseInt(hex.slice(1), 16);
-            return `rgba(${(number >> 16) & 255}, ${(number >> 8) & 255}, ${number & 255}, ${alpha})`;
-        };
-        let uakVideoLastTick = { time: -1, at: 0 };
-        // Reference: findInputCard, including both app generations.
-        function uakFindInputCard() {
-            const solidBg = (element) => {
-                const bg = getComputedStyle(element).backgroundColor;
-                return Boolean(bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent");
-            };
-            const walkUp = (from) => {
-                let element = from.parentElement;
-                while (element && element !== document.body) {
-                    if (solidBg(element)) return element;
-                    element = element.parentElement;
-                }
-                return null;
-            };
-            for (const editor of document.querySelectorAll('[data-lexical-editor="true"]')) {
-                const card = walkUp(editor);
-                if (card && /card/i.test(String(card.className))) return card;
-            }
-            const textarea = document.querySelector("textarea");
-            if (textarea) {
-                const card = walkUp(textarea) || textarea.parentElement;
-                if (card) return card;
-            }
-            for (const editor of document.querySelectorAll('[data-lexical-editor="true"]')) {
-                const card = walkUp(editor);
-                if (card) return card;
-            }
-            return document.querySelector("[class*='RlGAzG_card']");
-        }
-        // Reference: applyInputBg, with UAK-owned classes and CSS variables.
-        function uakApplyInputBg(inputBg) {
-            const active = Boolean(inputBg?.enabled && inputBg.imageUrl);
-            const card = uakFindInputCard();
-            if (!card) return;
-            if (!active) {
-                card.classList.remove("uak-input-bg", "uak-input-cross");
-                card.style.removeProperty("--uak-input-img");
-                card.style.removeProperty("--uak-input-grad");
-                card.style.removeProperty("--uak-input-mask");
-                return;
-            }
-            const mid = Math.min(Math.max(Number(inputBg.transition) || 55, 10), 90);
-            const solid = Math.max(mid - 12, 0);
-            const fade = Math.min(mid + 22, 100);
-            const mode = inputBg.mode || "fill";
-            const width = 100 + Math.min(Math.max(Number(inputBg.scale) || 0, -100), 100);
-            const size = mode === "stretch" ? `${width}% ${width}%` : mode === "fit" ? "contain" : `${width}% auto`;
-            card.classList.add("uak-input-bg");
-            card.classList.toggle("uak-input-cross", mode === "cross");
-            card.style.setProperty("--uak-input-img", `url("${uakCssUrlEscape(inputBg.imageUrl)}")`);
-            card.style.setProperty("--uak-input-size", size);
-            card.style.setProperty("--uak-input-repeat", mode === "repeat" ? "repeat" : "no-repeat");
-            card.style.setProperty("--uak-input-pos", mode === "center" ? "center" : `${inputBg.posX}% ${inputBg.posY}%`);
-            card.style.setProperty("--uak-input-grad", `linear-gradient(to right, rgba(44,44,46,var(--uak-input-bg-alpha,1)) 0%, rgba(44,44,46,var(--uak-input-bg-alpha,1)) ${solid}%, rgba(44,44,46,0) ${fade}%, rgba(44,44,46,0) 100%)`);
-            card.style.setProperty("--uak-input-blur", `${Math.min(Math.max(Number(inputBg.blur) || 0, 0), 40)}px`);
-            card.style.setProperty("--uak-input-opacity", String(Math.min(Math.max(Number(inputBg.opacity) ?? 100, 0), 100) / 100));
-            card.style.setProperty("--uak-input-mask", mode === "cross" ? "none" : `linear-gradient(to right, transparent 0%, transparent ${solid}%, #000 ${fade}%, #000 100%)`);
-        }
-        // Reference: applyInputOpacity.
-        function uakApplyInputOpacity(inputBg) {
-            const alpha = Math.min(Math.max(Number(inputBg?.inputOpacity) ?? 100, 0), 100) / 100;
-            const card = uakFindInputCard();
-            if (!card) return;
-            card.style.setProperty("--uak-input-bg-alpha", String(alpha));
-            card.classList.toggle("uak-inputCard", alpha < 1);
-        }
-        // Reference: applyPopBg.
-        function uakApplyPopBg(popBg) {
-            const root = document.documentElement;
-            root.style.setProperty("--uak-pop-alpha", String(popBg.alpha / 100));
-            root.style.setProperty("--uak-pop-blur", `${popBg.blur}px`);
-            root.style.setProperty("--uak-pop-grain", String(popBg.grain * .35 / 100));
-        }
-        // Reference: applyChatColor.
-        function uakApplyChatColor(color) { document.documentElement.style.setProperty("--uak-chat-color", color || ""); }
-        // Reference: applyChatFont and chatFontPreviewStyle use the same shadow recipe.
-        function uakApplyChatFont(font) {
-            const px = (value, min, max) => `${Math.min(Math.max(Number(value) || 0, min), max)}px`;
-            const color = /^#[0-9a-fA-F]{6}$/.test(font.shadowColor) ? font.shadowColor : "#000000";
-            const shadow = `${px(font.shadowX, -10, 10)} ${px(font.shadowY, -10, 10)} ${px(font.shadowBlur, 0, 20)} ${uakHexToRgba(color, font.shadowStrength / 100) || color}`;
-            const root = document.documentElement;
-            root.style.setProperty("--uak-chat-weight", font.aiBold ? String(font.weight) : "");
-            root.style.setProperty("--uak-user-weight", font.userBold ? String(font.weight) : "");
-            root.style.setProperty("--uak-chat-shadow", font.aiShadow ? shadow : "");
-            root.style.setProperty("--uak-user-shadow", font.userShadow ? shadow : "");
-        }
-        // Reference: applyInputBox.
-        function uakApplyInputBox(box) {
-            const root = document.documentElement;
-            const alpha = box.opacity / 100;
-            root.style.setProperty("--uak-inputbox-bg-rgba", uakHexToRgba(box.bgColor, alpha) || `rgba(44,44,46,${alpha})`);
-            root.style.setProperty("--uak-inputbox-text", box.textColor || "");
-            root.style.setProperty("--uak-inputbox-blur", `${box.blur}px`);
-        }
-        // Reference: kickVideo and ensureVideoWatchdog.
-        function uakKickVideo(video) {
-            try { video.play()?.catch(() => {}); } catch { /* retry on the next watchdog tick */ }
-        }
-        function uakWatchVideo() {
-            const media = document.getElementById("uak-skin-media");
-            const video = media?.querySelector("video");
-            if (!video || !uakSettingsStore.getState().videoUrl) return;
-            const now = Date.now();
-            if (video.paused) {
-                uakKickVideo(video);
-                uakVideoLastTick = { time: video.currentTime, at: now };
-                return;
-            }
-            if (Math.abs(video.currentTime - uakVideoLastTick.time) > .01) {
-                uakVideoLastTick = { time: video.currentTime, at: now };
-                return;
-            }
-            if (now - uakVideoLastTick.at > 6000) {
-                uakVideoLastTick = { time: -1, at: now };
-                try { video.load(); } catch { /* best effort */ }
-                uakKickVideo(video);
-            }
-        }
         function uakClearAppearance(root) {
             root.classList.remove("uak-liquid", "uak-no-blur");
-            for (const name of ["--uak-bg-alpha", "--uak-input-alpha", "--uak-glass-blur", "--uak-pop-alpha", "--uak-pop-blur", "--uak-pop-grain", "--uak-chat-color", "--uak-chat-weight", "--uak-user-weight", "--uak-chat-shadow", "--uak-user-shadow", "--uak-inputbox-bg-rgba", "--uak-inputbox-text", "--uak-inputbox-blur"]) root.style.removeProperty(name);
+            for (const name of ["--uak-bg-alpha", "--uak-input-alpha", "--uak-glass-blur", "--uak-pop-alpha", "--uak-pop-blur", "--uak-pop-grain"]) root.style.removeProperty(name);
             document.getElementById("uak-skin-root")?.remove();
             document.querySelector(".uak-liquid-wash")?.remove();
-            const card = uakFindInputCard();
-            card?.classList.remove("uak-input-bg", "uak-input-cross", "uak-inputCard");
-            if (card) {
-                for (const name of ["--uak-input-img", "--uak-input-size", "--uak-input-repeat", "--uak-input-pos", "--uak-input-grad", "--uak-input-blur", "--uak-input-opacity", "--uak-input-mask", "--uak-input-bg-alpha"]) card.style.removeProperty(name);
-            }
         }
         function uakApplyAppearance(settings) {
             if (typeof document === "undefined" || !document.body) return;
@@ -1540,17 +1370,10 @@ html.uak-liquid [class*='kBm9Yq_body'], html.uak-liquid [class*='v5IAXa_body'] {
             if (signature === uakLastAppearance) return;
             uakLastAppearance = signature;
             const root = document.documentElement;
-            if (!cfg.imageUrl && !cfg.videoUrl) {
-                // No wallpaper means opaque native surfaces; independent text and
-                // composer settings still use their own switches.
+            if (!cfg.imageUrl) {
                 uakClearAppearance(root);
                 root.classList.add("uak-liquid", "uak-no-blur");
                 root.style.setProperty("--uak-bg-alpha", "1");
-                uakApplyChatColor(cfg.chatColor);
-                uakApplyChatFont(cfg.chatFont);
-                uakApplyInputBox(cfg.inputBox);
-                uakApplyInputBg(cfg.inputBg);
-                uakApplyInputOpacity(cfg.inputBg);
                 return;
             }
             root.classList.add("uak-liquid");
@@ -1568,41 +1391,16 @@ html.uak-liquid [class*='kBm9Yq_body'], html.uak-liquid [class*='v5IAXa_body'] {
             }
             const media = layer.querySelector("#uak-skin-media");
             const blur = layer.querySelector("#uak-skin-blur");
-            const filter = `brightness(${cfg.brightness}%) contrast(${cfg.contrast}%) saturate(${cfg.saturate}%)`;
-            const scale = Math.max(10, 100 + cfg.scale) / 100;
-            // Reference: applySkin mediaChanged; video and image are exclusive.
-            if (cfg.videoUrl) {
-                let video = media.querySelector("video");
-                if (!video || video.dataset.uakSrc !== cfg.videoUrl) {
-                    media.textContent = "";
-                    video = document.createElement("video");
-                    video.dataset.uakSrc = cfg.videoUrl;
-                    video.preload = "auto"; video.src = cfg.videoUrl; video.autoplay = true; video.loop = true; video.playsInline = true;
-                    video.addEventListener("ended", () => { try { video.currentTime = 0; } catch { /* best effort */ } uakKickVideo(video); });
-                    video.addEventListener("pause", () => { setTimeout(() => { if (video.paused && video.isConnected) uakKickVideo(video); }, 120); });
-                    video.addEventListener("error", () => { try { video.load(); } catch { /* best effort */ } uakKickVideo(video); });
-                    media.append(video);
-                    uakVideoLastTick = { time: -1, at: Date.now() };
-                }
-                media.style.backgroundImage = "";
-                video.muted = cfg.videoMuted; video.volume = cfg.videoVolume / 100;
-                video.style.cssText = `width:100%;height:100%;object-fit:cover;filter:${filter};transform:scale(${scale})`;
-                uakKickVideo(video);
-            } else {
-                media.textContent = "";
-                media.style.backgroundImage = `url("${uakCssUrlEscape(cfg.imageUrl)}")`;
-                media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : cfg.imageMode;
-                media.style.backgroundRepeat = cfg.imageMode === "repeat" ? "repeat" : "no-repeat";
-                media.style.filter = filter;
-                media.style.transform = `scale(${scale})`;
-            }
+            media.textContent = "";
+            media.style.backgroundImage = `url("${uakCssUrlEscape(cfg.imageUrl)}")`;
+            media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : cfg.imageMode;
+            media.style.backgroundRepeat = cfg.imageMode === "repeat" ? "repeat" : "no-repeat";
+            media.style.filter = `brightness(${cfg.brightness}%) contrast(${cfg.contrast}%) saturate(${cfg.saturate}%)`;
+            media.style.transform = `scale(${Math.max(10, 100 + cfg.scale) / 100})`;
             blur.style.backdropFilter = cfg.blur > 0 ? `blur(${cfg.blur}px)` : "none";
-            uakApplyPopBg(cfg.popBg);
-            uakApplyChatColor(cfg.chatColor);
-            uakApplyChatFont(cfg.chatFont);
-            uakApplyInputBox(cfg.inputBox);
-            uakApplyInputBg(cfg.inputBg);
-            uakApplyInputOpacity(cfg.inputBg);
+            root.style.setProperty("--uak-pop-alpha", String(cfg.popBg.alpha / 100));
+            root.style.setProperty("--uak-pop-blur", `${cfg.popBg.blur}px`);
+            root.style.setProperty("--uak-pop-grain", String(cfg.popBg.grain * .35 / 100));
             if (!document.querySelector(".uak-liquid-wash")) {
                 const wash = document.createElement("div"); wash.className = "uak-liquid-wash"; wash.setAttribute("aria-hidden", "true"); document.body.append(wash);
             }
@@ -1633,21 +1431,17 @@ html.uak-liquid [class*='kBm9Yq_body'], html.uak-liquid [class*='v5IAXa_body'] {
                 if (!added || timer !== null) return;
                 timer = setTimeout(() => {
                     timer = null;
-                    uakMarkGlassSurfaces();
-                    // Reference: watchInputCard; React may recreate the composer on navigation.
-                    const cfg = uakSettingsStore.getState();
-                    const card = uakFindInputCard();
-                    if (card) {
-                        if (cfg.inputBg.enabled && !card.classList.contains("uak-input-bg")) uakApplyInputBg(cfg.inputBg);
-                        if (cfg.inputBg.inputOpacity < 100 && !card.classList.contains("uak-inputCard")) uakApplyInputOpacity(cfg.inputBg);
+                    for (const record of records) {
+                        for (const node of record.addedNodes) {
+                            if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+                        }
                     }
                 }, 80);
             }) : null;
             observer.observe(document.body, { childList: true, subtree: true });
             void uakLoadSettings().then(uakApplyAppearance);
             const unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
-            const videoTimer = setInterval(uakWatchVideo, 2000);
-            return () => { observer.disconnect(); if (timer !== null) clearTimeout(timer); clearInterval(videoTimer); unsubscribe(); };
+            return () => { observer.disconnect(); if (timer !== null) clearTimeout(timer); unsubscribe(); };
         }
         function uakIsSessionLogDialog(element) {
             if (!element || element.closest(".uak-settings")) return false;
@@ -1704,16 +1498,6 @@ const UAK_SETTINGS_CSS = `
 .uak-setting-field > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
 .uak-setting-field input { min-width: 0; flex: 1; padding: 7px 10px; color: var(--dsw-alias-label-primary); background: rgb(219 234 254 / 12%); border: 1px solid rgb(147 197 253 / 32%); border-radius: 8px; font: inherit; font-size: 12px; }
 .uak-setting-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-.uak-setting-toggle { display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px; color: var(--dsw-alias-label-secondary); }
-.uak-setting-toggle input { accent-color: #689fff; }
-.uak-setting-color { display: flex; align-items: center; gap: 10px; margin: 10px 0; color: var(--dsw-alias-label-secondary); font-size: 13px; }
-.uak-setting-color > span { flex: 0 0 100px; }
-.uak-setting-color input { width: 40px; height: 28px; padding: 1px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; cursor: pointer; }
-.uak-setting-color code { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
-.uak-bg-preview { position: relative; width: 100%; height: 64px; margin: 10px 0; overflow: hidden; border: 1px dashed var(--dsw-alias-border-l2); border-radius: 8px; background: rgb(0 0 0 / 35%); cursor: grab; touch-action: none; }
-.uak-bg-preview:active { cursor: grabbing; }
-.uak-bg-preview-image { position: absolute; inset: 0; background-repeat: no-repeat; background-size: cover; }
-.uak-font-preview { padding: 8px 0; font-size: 15px; line-height: 22px; color: var(--dsw-alias-label-primary); }
 
 .uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: #172554; background: rgb(219 234 254 / 32%); border: 1px solid rgb(147 197 253 / 42%); border-radius: 8px; font: inherit; font-size: 12px; }
 .uak-setting-choice { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 12px 0; }
@@ -3134,8 +2918,7 @@ const UAK_SETTINGS_CSS = `
         //#endregion
 
         //#region client/settings-page.js
-// Reference: SkinPanel. Controls commit to UAK's store and Host route.
-        function uakCreateSettingsPage() {
+function uakCreateSettingsPage() {
             const h = react.createElement;
             const Slider = ({ label, value, min, max, step = 1, suffix = "", onChange }) => h("label", { className: "uak-setting-slider" },
                 h("span", null, label),
@@ -3144,10 +2927,6 @@ const UAK_SETTINGS_CSS = `
             const Choice = ({ label, options, value, onChange }) => h("div", { className: "uak-setting-choice" },
                 h("span", null, label), h("div", { className: "uak-setting-options", role: "group", "aria-label": label },
                     options.map(([id, text]) => h("button", { key: id, type: "button", className: "uak-chip", "data-active": value === id ? "true" : "false", "aria-pressed": value === id, onClick: () => onChange(id) }, text))));
-            const Toggle = ({ label, checked, onChange }) => h("label", { className: "uak-setting-toggle" }, h("span", null, label), h("input", { type: "checkbox", checked, onChange: (event) => onChange(event.target.checked) }));
-            const Color = ({ label, value, fallback = "#000000", onChange, reset }) => h("div", { className: "uak-setting-color" },
-                h("span", null, label), h("input", { type: "color", value: value || fallback, onChange: (event) => onChange(event.target.value), "aria-label": label }),
-                h("code", null, value || uakTr("默认", "Default")), reset ? h("button", { type: "button", className: "uak-chip", onClick: reset }, uakTr("恢复默认", "Reset")) : null);
             const UrlInput = ({ label, value, onChange }) => h("label", { className: "uak-setting-field" }, h("span", null, label), h("input", { type: "text", value, placeholder: "https://…", onChange: (event) => onChange(event.target.value) }));
             const Section = ({ title, children }) => h("section", { className: "uak-settings-section" }, h("h2", null, title), children);
             return function UakSettingsPage() {
@@ -3155,11 +2934,7 @@ const UAK_SETTINGS_CSS = `
                 const [draft, setDraft] = react.useState(uakSettingsStore.getState);
                 const [message, setMessage] = react.useState("");
                 const [saving, setSaving] = react.useState(false);
-                const [dragPreview, setDragPreview] = react.useState(null);
-                const previewRef = react.useRef(null);
                 const imageRef = react.useRef(null);
-                const videoRef = react.useRef(null);
-                const inputImageRef = react.useRef(null);
                 react.useEffect(() => uakSubscribeUiLocale(setRevision), []);
                 react.useEffect(() => { void uakLoadSettings().then(setDraft).catch(() => setMessage(uakTr("读取失败", "Could not load settings"))); }, []);
                 const commit = (next) => {
@@ -3168,59 +2943,20 @@ const UAK_SETTINGS_CSS = `
                     void uakSaveSettings(next).then(() => setMessage(uakTr("已保存并即时生效。", "Saved and applied."))).catch(() => setMessage(uakTr("保存失败，请稍后重试。", "Could not save settings.")));
                 };
                 const update = (patch) => commit({ ...draft, ...patch });
-                const updateNested = (key, patch) => update({ [key]: { ...draft[key], ...patch } });
-                const chooseMedia = (file, target) => {
+                const chooseImage = (file) => {
                     if (!file) return;
                     setSaving(true);
-                    void uakUploadMedia(file).then((url) => {
-                        if (target === "inputBg") updateNested("inputBg", { imageUrl: url });
-                        else if (target === "video") update({ videoUrl: url, imageUrl: "" });
-                        else update({ imageUrl: url, videoUrl: "" });
-                        setMessage(uakTr("本地文件已保存并即时生效。", "Local file saved and applied."));
-                    }).catch(() => setMessage(uakTr("媒体上传失败，请检查文件格式。", "Upload failed. Check the media format."))).finally(() => setSaving(false));
-                };
-                const previewSize = () => {
-                    const ib = draft.inputBg;
-                    const width = 100 + Math.min(Math.max(Number(ib.scale) || 0, -100), 100);
-                    return ib.mode === "stretch" ? `${width}% ${width}%` : ib.mode === "fit" ? "contain" : `${width}% auto`;
-                };
-                const previewMask = () => {
-                    const ib = draft.inputBg;
-                    if (ib.mode === "cross") return "none";
-                    const mid = Math.min(Math.max(Number(ib.transition) || 55, 10), 90);
-                    return `linear-gradient(to right, transparent 0%, transparent ${Math.max(mid - 12, 0)}%, #000 ${Math.min(mid + 22, 100)}%, #000 100%)`;
-                };
-                // Reference: dragPreview handlers from SkinPanel.
-                react.useEffect(() => {
-                    if (!dragPreview) return undefined;
-                    const move = (event) => {
-                        const { startX, startY, baseX, baseY, rect } = dragPreview;
-                        updateNested("inputBg", { posX: Math.round(Math.min(Math.max(baseX + (event.clientX - startX) / rect.width * 100, 0), 100)), posY: Math.round(Math.min(Math.max(baseY + (event.clientY - startY) / rect.height * 100, 0), 100)) });
-                    };
-                    const up = () => setDragPreview(null);
-                    window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
-                    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
-                }, [dragPreview, draft.inputBg]);
-                // Reference: chatFontPreviewStyle.
-                const fontPreviewStyle = () => {
-                    const font = draft.chatFont;
-                    const color = uakHexToRgba(font.shadowColor, font.shadowStrength / 100) || font.shadowColor;
-                    return {
-                        fontWeight: font.aiBold || font.userBold ? String(font.weight) : "400",
-                        textShadow: font.aiShadow || font.userShadow ? `${font.shadowX}px ${font.shadowY}px ${font.shadowBlur}px ${color}` : "none"
-                    };
+                    void uakUploadImage(file).then((url) => {
+                        update({ imageUrl: url });
+                        setMessage(uakTr("图片已保存并即时生效。", "Image saved and applied."));
+                    }).catch(() => setMessage(uakTr("图片上传失败，请检查文件格式。", "Upload failed. Check the image format."))).finally(() => setSaving(false));
                 };
                 return h("div", { className: "uak-settings" },
-                    h("p", { className: "uak-settings-intro" }, uakTr("壁纸、材质、输入框、消息与月度书卷。所有外观设置实时保存。", "Wallpaper, materials, composer, messages, and monthly books. Appearance changes save live.")),
-                    h(Section, { title: uakTr("背景图片", "Background image") },
-                        h(UrlInput, { label: uakTr("图片 URL", "Image URL"), value: draft.imageUrl, onChange: (value) => update({ imageUrl: value, videoUrl: "" }) }),
-                        h("div", { className: "uak-setting-actions" }, h("input", { ref: imageRef, hidden: true, type: "file", accept: "image/*", onChange: (event) => chooseMedia(event.target.files?.[0], "image") }), h("button", { type: "button", className: "uak-chip", disabled: saving, onClick: () => imageRef.current?.click() }, uakTr("选择图片", "Choose image")), h("button", { type: "button", className: "uak-chip", onClick: () => update({ imageUrl: "", videoUrl: "" }) }, uakTr("清除背景", "Clear background"))),
+                    h("p", { className: "uak-settings-intro" }, uakTr("图片壁纸、磨砂材质与月度书卷。外观设置实时保存。", "Image wallpaper, frosted materials, and monthly books. Appearance changes save live.")),
+                    h(Section, { title: uakTr("图片壁纸", "Image wallpaper") },
+                        h(UrlInput, { label: uakTr("图片 URL", "Image URL"), value: draft.imageUrl, onChange: (value) => update({ imageUrl: value }) }),
+                        h("div", { className: "uak-setting-actions" }, h("input", { ref: imageRef, hidden: true, type: "file", accept: "image/*", onChange: (event) => chooseImage(event.target.files?.[0]) }), h("button", { type: "button", className: "uak-chip", disabled: saving, onClick: () => imageRef.current?.click() }, uakTr("选择图片", "Choose image")), h("button", { type: "button", className: "uak-chip", onClick: () => update({ imageUrl: "" }) }, uakTr("清除背景", "Clear background"))),
                         h(Choice, { label: uakTr("显示模式", "Display mode"), value: draft.imageMode, onChange: (value) => update({ imageMode: value }), options: [["cover", uakTr("填充", "Cover")], ["contain", uakTr("适应", "Contain")], ["repeat", uakTr("平铺", "Repeat")]] })),
-                    h(Section, { title: uakTr("背景视频", "Background video") },
-                        h(UrlInput, { label: uakTr("视频 URL", "Video URL"), value: draft.videoUrl, onChange: (value) => update({ videoUrl: value, imageUrl: "" }) }),
-                        h("div", { className: "uak-setting-actions" }, h("input", { ref: videoRef, hidden: true, type: "file", accept: "video/*", onChange: (event) => chooseMedia(event.target.files?.[0], "video") }), h("button", { type: "button", className: "uak-chip", disabled: saving, onClick: () => videoRef.current?.click() }, uakTr("选择视频", "Choose video"))),
-                        h("div", { className: "uak-setting-sliders" }, h(Slider, { label: uakTr("音量", "Volume"), value: draft.videoVolume, min: 0, max: 100, suffix: "%", onChange: (value) => update({ videoVolume: value }) })),
-                        h(Toggle, { label: uakTr("静音", "Muted"), checked: draft.videoMuted, onChange: (value) => update({ videoMuted: value }) })),
                     h(Section, { title: uakTr("效果与滤镜", "Effects and filters") },
                         h("div", { className: "uak-setting-sliders" },
                             h(Slider, { label: uakTr("背景模糊", "Background blur"), value: draft.blur, min: 0, max: 40, suffix: "px", onChange: (value) => update({ blur: value }) }),
@@ -3232,42 +2968,12 @@ const UAK_SETTINGS_CSS = `
                             h(Slider, { label: uakTr("对比度", "Contrast"), value: draft.contrast, min: 50, max: 150, suffix: "%", onChange: (value) => update({ contrast: value }) }),
                             h(Slider, { label: uakTr("饱和度", "Saturation"), value: draft.saturate, min: 0, max: 200, suffix: "%", onChange: (value) => update({ saturate: value }) })),
                         h("button", { type: "button", className: "uak-chip", onClick: () => update({ brightness: 100, contrast: 100, saturate: 100 }) }, uakTr("滤镜恢复默认", "Reset filters"))),
-                    h(Section, { title: uakTr("输入框背景", "Input background") },
-                        h(Toggle, { label: uakTr("启用输入框背景", "Enable input background"), checked: draft.inputBg.enabled, onChange: (value) => updateNested("inputBg", { enabled: value }) }),
-                        h(UrlInput, { label: uakTr("图片 URL", "Image URL"), value: draft.inputBg.imageUrl, onChange: (value) => updateNested("inputBg", { imageUrl: value }) }),
-                        h("div", { className: "uak-setting-actions" }, h("input", { ref: inputImageRef, hidden: true, type: "file", accept: "image/*", onChange: (event) => chooseMedia(event.target.files?.[0], "inputBg") }), h("button", { type: "button", className: "uak-chip", onClick: () => inputImageRef.current?.click() }, uakTr("选择图片", "Choose image")), h("button", { type: "button", className: "uak-chip", onClick: () => updateNested("inputBg", { imageUrl: "" }) }, uakTr("清除", "Clear"))),
-                        h(Choice, { label: uakTr("图片模式", "Image mode"), value: draft.inputBg.mode, onChange: (value) => updateNested("inputBg", { mode: value }), options: [["fill", uakTr("填充", "Fill")], ["fit", uakTr("适应", "Fit")], ["stretch", uakTr("拉伸", "Stretch")], ["repeat", uakTr("平铺", "Tile")], ["center", uakTr("居中", "Center")], ["cross", uakTr("跨区", "Span")]] }),
-                        h("div", { ref: previewRef, className: "uak-bg-preview", title: uakTr("拖动调整图片位置", "Drag to move the image"), onMouseDown: (event) => { event.preventDefault(); const rect = previewRef.current?.getBoundingClientRect(); if (rect) setDragPreview({ startX: event.clientX, startY: event.clientY, baseX: draft.inputBg.posX, baseY: draft.inputBg.posY, rect }); } }, h("div", { className: "uak-bg-preview-image", style: { backgroundImage: draft.inputBg.imageUrl ? `url("${uakCssUrlEscape(draft.inputBg.imageUrl)}")` : "none", backgroundSize: previewSize(), backgroundRepeat: draft.inputBg.mode === "repeat" ? "repeat" : "no-repeat", backgroundPosition: draft.inputBg.mode === "center" ? "center" : `${draft.inputBg.posX}% ${draft.inputBg.posY}%`, maskImage: previewMask(), WebkitMaskImage: previewMask() } })),
-                        h("div", { className: "uak-setting-sliders" },
-                            h(Slider, { label: uakTr("过渡位置", "Transition"), value: draft.inputBg.transition, min: 10, max: 90, suffix: "%", onChange: (value) => updateNested("inputBg", { transition: value }) }),
-                            h(Slider, { label: uakTr("图片左右位置", "Image X position"), value: draft.inputBg.posX, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("inputBg", { posX: value }) }),
-                            h(Slider, { label: uakTr("图片上下位置", "Image Y position"), value: draft.inputBg.posY, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("inputBg", { posY: value }) }),
-                            h(Slider, { label: uakTr("图片模糊", "Image blur"), value: draft.inputBg.blur, min: 0, max: 40, suffix: "px", onChange: (value) => updateNested("inputBg", { blur: value }) }),
-                            h(Slider, { label: uakTr("图片透明", "Image opacity"), value: draft.inputBg.opacity, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("inputBg", { opacity: value }) }),
-                            h(Slider, { label: uakTr("图片缩放", "Image zoom"), value: draft.inputBg.scale, min: -100, max: 100, onChange: (value) => updateNested("inputBg", { scale: value }) }),
-                            h(Slider, { label: uakTr("输入框透明", "Input transparency"), value: draft.inputBg.inputOpacity, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("inputBg", { inputOpacity: value }) }))),
                     h(Section, { title: uakTr("展开框背景", "Popover background") },
-                        h("div", { className: "uak-setting-sliders" }, h(Slider, { label: uakTr("不透明度", "Opacity"), value: draft.popBg.alpha, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("popBg", { alpha: value }) }), h(Slider, { label: uakTr("模糊度", "Blur"), value: draft.popBg.blur, min: 0, max: 40, suffix: "px", onChange: (value) => updateNested("popBg", { blur: value }) }), h(Slider, { label: uakTr("颗粒度", "Grain"), value: draft.popBg.grain, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("popBg", { grain: value }) })),
-                        h("button", { type: "button", className: "uak-chip", onClick: () => update({ popBg: { alpha: 40, blur: 10, grain: 5 } }) }, uakTr("恢复默认", "Reset"))),
-                    h(Section, { title: uakTr("我发送的消息", "My messages") },
-                        h(Color, { label: uakTr("气泡颜色", "Bubble color"), value: draft.inputBox.bgColor, fallback: "#f9fafb", onChange: (value) => updateNested("inputBox", { bgColor: value }), reset: () => updateNested("inputBox", { bgColor: "" }) }),
-                        h(Color, { label: uakTr("文字颜色", "Text color"), value: draft.inputBox.textColor, fallback: "#1c1c1e", onChange: (value) => updateNested("inputBox", { textColor: value }), reset: () => updateNested("inputBox", { textColor: "" }) }),
-                        h("div", { className: "uak-setting-sliders" }, h(Slider, { label: uakTr("不透明度", "Opacity"), value: draft.inputBox.opacity, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("inputBox", { opacity: value }) }), h(Slider, { label: uakTr("模糊度", "Blur"), value: draft.inputBox.blur, min: 0, max: 40, suffix: "px", onChange: (value) => updateNested("inputBox", { blur: value }) })),
-                        h("button", { type: "button", className: "uak-chip", onClick: () => update({ inputBox: { bgColor: "", textColor: "", opacity: 100, blur: 0 } }) }, uakTr("恢复默认", "Reset"))),
-                    h(Section, { title: uakTr("AI 回复文本", "AI reply text") }, h(Color, { label: uakTr("颜色", "Color"), value: draft.chatColor, fallback: "#f9fafb", onChange: (value) => update({ chatColor: value }), reset: () => update({ chatColor: "" }) })),
-                    h(Section, { title: uakTr("对话字体", "Chat typography") },
-                        h(Toggle, { label: uakTr("AI 回复加粗", "Bold AI replies"), checked: draft.chatFont.aiBold, onChange: (value) => updateNested("chatFont", { aiBold: value }) }),
-                        h(Toggle, { label: uakTr("我的消息加粗", "Bold my messages"), checked: draft.chatFont.userBold, onChange: (value) => updateNested("chatFont", { userBold: value }) }),
-                        h(Toggle, { label: uakTr("AI 回复阴影", "AI reply shadow"), checked: draft.chatFont.aiShadow, onChange: (value) => updateNested("chatFont", { aiShadow: value }) }),
-                        h(Toggle, { label: uakTr("我的消息阴影", "My message shadow"), checked: draft.chatFont.userShadow, onChange: (value) => updateNested("chatFont", { userShadow: value }) }),
-                        h("p", { className: "uak-font-preview", style: fontPreviewStyle() }, uakTr("预览：对话字体 AaBb 123", "Preview: chat typography AaBb 123")),
-                        h(Color, { label: uakTr("阴影颜色", "Shadow color"), value: draft.chatFont.shadowColor, onChange: (value) => updateNested("chatFont", { shadowColor: value }) }),
                         h("div", { className: "uak-setting-sliders" },
-                            h(Slider, { label: uakTr("加粗字重", "Bold weight"), value: draft.chatFont.weight, min: 400, max: 900, step: 100, onChange: (value) => updateNested("chatFont", { weight: value }) }),
-                            h(Slider, { label: uakTr("阴影深浅", "Shadow strength"), value: draft.chatFont.shadowStrength, min: 0, max: 100, suffix: "%", onChange: (value) => updateNested("chatFont", { shadowStrength: value }) }),
-                            h(Slider, { label: uakTr("阴影模糊", "Shadow blur"), value: draft.chatFont.shadowBlur, min: 0, max: 20, suffix: "px", onChange: (value) => updateNested("chatFont", { shadowBlur: value }) }),
-                            h(Slider, { label: uakTr("阴影左右偏移", "Shadow X offset"), value: draft.chatFont.shadowX, min: -10, max: 10, suffix: "px", onChange: (value) => updateNested("chatFont", { shadowX: value }) }),
-                            h(Slider, { label: uakTr("阴影上下偏移", "Shadow Y offset"), value: draft.chatFont.shadowY, min: -10, max: 10, suffix: "px", onChange: (value) => updateNested("chatFont", { shadowY: value }) }))),
+                            h(Slider, { label: uakTr("不透明度", "Opacity"), value: draft.popBg.alpha, min: 0, max: 100, suffix: "%", onChange: (value) => update({ popBg: { ...draft.popBg, alpha: value } }) }),
+                            h(Slider, { label: uakTr("模糊度", "Blur"), value: draft.popBg.blur, min: 0, max: 40, suffix: "px", onChange: (value) => update({ popBg: { ...draft.popBg, blur: value } }) }),
+                            h(Slider, { label: uakTr("颗粒度", "Grain"), value: draft.popBg.grain, min: 0, max: 100, suffix: "%", onChange: (value) => update({ popBg: { ...draft.popBg, grain: value } }) })),
+                        h("button", { type: "button", className: "uak-chip", onClick: () => update({ popBg: { alpha: 40, blur: 10, grain: 5 } }) }, uakTr("恢复默认", "Reset"))),
                     h(Section, { title: uakTr("月度书卷", "Monthly books") },
                         h("p", null, uakTr("短章不足5万字；中构5万至不足30万字；鸿篇30万字及以上。字数为约数。", "Short: under 50K characters. Medium: 50K–300K. Epic: 300K or more. Counts are approximate.")),
                         h(Choice, { label: uakTr("书目选取", "Book selection"), value: draft.bookMode, onChange: (value) => update({ bookMode: value }), options: [["random", uakTr("随机选书", "Random")], ["selected", uakTr("固定选书", "Selected")]] }),
