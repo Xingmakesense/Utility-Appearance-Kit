@@ -1,6 +1,6 @@
 # Utility-Appearance-Kit
 
-> 版本 `2.4.5` · 需要 DSH `>= 0.2.1-rc.2`
+> 版本 `2.4.6` · 需要 DSH `>= 0.2.1-rc.2`
 
 **在 DeepSeek Harness 输入区直接拖动推理强度，并查看 DeepSeek 峰谷状态。** 滑条紧贴官方模型选择器左侧，按模型的真实档位数伸缩；订阅卡片与认证已拆分为独立的 `dsh-Subscription-Management`。
 

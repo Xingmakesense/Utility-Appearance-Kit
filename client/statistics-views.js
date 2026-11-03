@@ -93,13 +93,12 @@
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
 .uak-statsHeatScroll { width: 100%; max-width: 100%; padding: 0; overflow: hidden; }
 .uak-statsHeatGrid {
-    display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr);
-    gap: 4px; width: 100%;
+    display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 14px);
+    grid-auto-columns: 14px; grid-auto-rows: 14px; gap: 4px; width: max-content;
 }
 .uak-statsWeekday { display: none; }
 .uak-statsDay {
-    display: block; width: 100%; height: auto; aspect-ratio: 1;
+    display: block; width: 14px; height: 14px;
     border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent); }
@@ -119,8 +118,8 @@
 }
 .uak-statsBook::after { display: none; }
 .uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio { display: none; }
-.uak-statsBookTitle { margin: 0; color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; line-height: 19px; }
-.uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 19px; }
+.uak-statsBookTitle { display: none; }
+.uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; }
 .uak-statsBookAmount { color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; }
 .uak-statsModels { margin-top: 0; }
 .uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; }
@@ -183,7 +182,7 @@
 .uak-statsMetricValue { color: #172554; }
 .uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus { color: #94a3b8; }
 .uak-statsDay {
-    display: block; width: 100%; height: auto; aspect-ratio: 1;
+    display: block; width: 14px; height: 14px;
     border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: #dbeafe; }
@@ -192,8 +191,8 @@
 .uak-statsDay[data-level="4"] { background: #2563eb; }
 .uak-statsDay[data-level="5"] { background: #1e3a8a; }
 .uak-statsBook { color: #64748b; }
-.uak-statsBookTitle { color: #172554; }
-.uak-statsBookDescription { color: #1e3a8a; }
+.uak-statsBookTitle { display: none; }
+.uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; }
 .uak-statsBookAmount { color: #1e3a8a; }
 .uak-statsModelTable { border-color: #e2e8f0; }
 .uak-statsModelRow, .uak-statsModel { border-color: #e2e8f0; }
@@ -293,10 +292,10 @@
 
         // Square day grid: 7 rows, Monday-first, one level per cell. `cells`
         // carries the blanks/dates from uakDayCells, `levels` only the shades.
-        // Weekly matrix: five columns (about 30 days) and always a complete 7-row
-// grid, so the block stays rectangular whatever the panel height is.
+        // Weekly matrix: 22 columns (about five months) and always a complete
+        // 7-row grid, so the block stays rectangular whatever the height is.
         const UAK_HEAT_ROWS = 7;
-        const UAK_HEAT_COLUMNS = 5;
+        const UAK_HEAT_COLUMNS = 22;
 
         function uakHeatMatrix(cells, levels, todayKey) {
             const days = Array.isArray(cells) ? cells : [];
