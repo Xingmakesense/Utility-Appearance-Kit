@@ -173,6 +173,7 @@
                 uakStatsMetricCards,
                 uakStatsBookComparison,
                 uakStatsModelTable,
-                uakStatsStatus
+                uakStatsStatus,
+                uakHoistAboveWorkspaceRow
             };
         }

@@ -38,6 +38,7 @@ const client = captured.factory((id) => id === "react" ? {
 const {
     uakBooks, uakBookTier, uakHeatThresholds, uakMonthHeatmap, uakSummarizeMonth,
     uakSanitizeSettings, uakFormatNumber, uakStatsT, uakStatsHeatmap,
+    uakHoistAboveWorkspaceRow,
 } = client;
 const day = (tokens, messages = 2, model = "deepseek-flash") => ({
     tokens, messages, hours: Array.from({ length: 24 }, (_, hour) => hour === 14 ? tokens : 0),
@@ -110,7 +111,50 @@ assert.equal(heatCells.some((cell) => cell.key === "2026-01-10" && cell.props["d
     "the rolling grid includes activity from earlier months");
 assert.equal(heatCells.some((cell) => cell.props["data-empty"] === "true"), false,
     "padding dates remain visible instead of collapsing the matrix");
+const fullWidthHeat = uakStatsHeatmap({
+    year: 2026, month: 3, summary, today: "2026-03-04", columns: 38
+});
+assert.equal(fullWidthHeat.children.length, 38, "wide panels add columns instead of stretching cells");
+assert.equal(fullWidthHeat.children.every((week) => week.children.length === 7), true);
+assert.equal(fullWidthHeat.children.at(-1).children.at(-1).key, "2026-03-04",
+    "adding columns keeps the latest date at the bottom-right");
 assert.equal(uakStatsHeatmap({ year: 2026, month: 3, summary: {}, today: "2026-03-04" }), null);
+
+// The card belongs above the hero's workspace/mode row, so the dock outlet is
+// re-seated in front of it and restored on cleanup.
+{
+    const makeNode = () => {
+        const node = { parentNode: null, children: [], querySelector: () => null };
+        node.appendChild = (child) => { child.parentNode = node; node.children.push(child); return child; };
+        node.insertBefore = (child, ref) => {
+            const from = child.parentNode;
+            if (from) from.children.splice(from.children.indexOf(child), 1);
+            const at = node.children.indexOf(ref);
+            node.children.splice(at < 0 ? node.children.length : at, 0, child);
+            child.parentNode = node;
+            return child;
+        };
+        return node;
+    };
+    const stack = makeNode();
+    const headline = makeNode();
+    const outlet = makeNode();
+    const workspaceRow = makeNode();
+    workspaceRow.querySelector = (selector) => selector === '[data-slot="conversation.hero.workspace"]' ? {} : null;
+    const rootEl = makeNode();
+    outlet.appendChild(rootEl);
+    stack.appendChild(headline);
+    stack.appendChild(outlet);
+    stack.appendChild(workspaceRow);
+    const restore = uakHoistAboveWorkspaceRow(rootEl);
+    assert.deepEqual(stack.children, [headline, outlet, workspaceRow],
+        "the card outlet moves in front of the workspace row");
+    restore();
+    assert.deepEqual(stack.children, [headline, workspaceRow, outlet],
+        "cleanup returns the outlet to its dock position");
+    assert.equal(uakHoistAboveWorkspaceRow(makeNode()), undefined,
+        "a seat without a workspace row is left untouched");
+}
 const defaults = uakSanitizeSettings({});
 assert.equal(defaults.bookMode, "random");
 assert.equal(defaults.bodyHeight, 360);

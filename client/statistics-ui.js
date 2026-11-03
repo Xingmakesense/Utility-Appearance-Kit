@@ -21,6 +21,29 @@
             return props?.blank === true && props?.running === false && props?.promptAttempted === false;
         }
 
+        // The dock renders the panel between the hero's workspace row and the
+        // composer. The reference layout puts the card ABOVE that row instead
+        // (headline -> card -> workspace/mode row -> composer), so the panel's
+        // DOM outlet is re-seated in front of the row. The anchor is the
+        // host-published `conversation.hero.workspace` slot, not a salted class.
+        function uakHoistAboveWorkspaceRow(rootEl) {
+            if (rootEl === null || rootEl === undefined || rootEl.parentNode === null) return undefined;
+            const outlet = rootEl.parentNode;
+            const stack = outlet.parentNode;
+            if (stack === null) return undefined;
+            const workspaceRow = Array.prototype.find.call(stack.children, function (child) {
+                return child !== outlet && typeof child.querySelector === "function"
+                    && child.querySelector('[data-slot="conversation.hero.workspace"]') !== null;
+            });
+            if (workspaceRow === undefined || workspaceRow === outlet.nextSibling) return undefined;
+            stack.insertBefore(outlet, workspaceRow);
+            return function () {
+                if (outlet.parentNode === stack && workspaceRow.parentNode === stack) {
+                    stack.insertBefore(outlet, workspaceRow.nextSibling);
+                }
+            };
+        }
+
         function uakUsageVisibility(props) {
             const source = props !== null && typeof props === "object" ? props : {};
             if (Object.prototype.hasOwnProperty.call(source, "blank")
@@ -102,6 +125,11 @@
                     if (typeof settingsStore?.subscribe !== "function") return undefined;
                     return settingsStore.subscribe(() => setSettings(uakUsageReadSettings(settingsStore)));
                 }, []);
+
+                react.useEffect(() => {
+                    if (!visible) return undefined;
+                    return uakHoistAboveWorkspaceRow(panelRef.current);
+                }, [visible, request.status, tab, range, year, month]);
 
                 react.useEffect(() => {
                     if (!visible) return undefined;
@@ -250,6 +278,13 @@
                 }
                 const heatPadding = heatLayout.pad;
                 const heatGap = heatLayout.gap;
+                // Keep the cells square and grow the number of columns until the
+                // heatmap uses the panel's full width. 36px is the frame's
+                // horizontal padding; ResizeObserver supplies the real width.
+                const heatAvailableWidth = viewportWidth - 36 - heatPadding * 2;
+                const heatColumns = Math.max(22, Math.floor(
+                    (heatAvailableWidth + heatGap) / (heatCell + heatGap)
+                ));
                 // The metrics and footer alone can already fill a very short
                 // panel; only then does the band step aside instead of pushing
                 // them out of view.
@@ -366,7 +401,7 @@
                                                         h("div", { className: "uak-statsMetricsWrap", ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
                                                         h("div", { className: "uak-statsContent" },
                                                             heatFits ? h("div", { className: "uak-statsHeatScroll" },
-                                                                uakStatsHeatmap({ year, month, summary, today })
+                                                                uakStatsHeatmap({ year, month, summary, today, columns: heatColumns })
                                                             ) : null
                                                         ),
                                                         // The note lives on its own row below the heat band,

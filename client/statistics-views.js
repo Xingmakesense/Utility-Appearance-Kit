@@ -127,10 +127,10 @@
     scrollbar-width: none; width: 100%; max-width: 100%; box-sizing: border-box;
 }
 .uak-statsHeatScroll::-webkit-scrollbar { display: none; }
-.uak-statsHeatGrid { display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px); width: max-content; min-width: 100%; }
+.uak-statsHeatGrid { display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px); width: 100%; min-width: max-content; }
 .uak-statsHeatWeek {
     display: flex; flex-direction: column; gap: var(--uak-heat-gap, 4px);
-    flex: 1 0 9px; max-width: var(--uak-heat-cell, 22px); min-width: 0;
+    flex: 1 1 0; min-width: 9px;
 }
 .uak-statsDay {
     display: block; width: 100%; aspect-ratio: 1; flex: none;
@@ -253,23 +253,24 @@
                 metric.format === "text" ? metric.value : format(metric.value)))));
         }
 
-        // Rolling calendar ported from HwFee's usage-stats layout: 22 complete
-        // columns of seven square cells, ending on the latest visible date.
+        // Rolling calendar: seven square cells per column, ending on the latest
+        // visible date. The caller chooses enough columns to fill the panel.
         // No colors are imported here; UAK's existing level ramp stays in use.
         const UAK_HEAT_ROWS = 7;
-        const UAK_HEAT_COLUMNS = 22;
+        const UAK_HEAT_DEFAULT_COLUMNS = 22;
         const UAK_HEAT_DAY_MS = 86400000;
 
         function uakHeatDateKey(date) {
             return date.toISOString().slice(0, 10);
         }
 
-        function uakHeatMatrix(summary, todayKey) {
+        function uakHeatMatrix(summary, todayKey, columns = UAK_HEAT_DEFAULT_COLUMNS) {
             const entries = uakPerDayEntries(summary);
             if (entries.length === 0) return null;
             const [year, month, day] = todayKey.split("-").map(Number);
             const anchor = Date.UTC(year, month - 1, day);
-            const count = UAK_HEAT_COLUMNS * UAK_HEAT_ROWS;
+            const columnCount = Math.max(1, Math.floor(Number(columns) || UAK_HEAT_DEFAULT_COLUMNS));
+            const count = columnCount * UAK_HEAT_ROWS;
             const start = anchor - (count - 1) * UAK_HEAT_DAY_MS;
             const thresholds = uakHeatThresholds(summary, year, month);
             return Array.from({ length: count }, (_, index) => {
@@ -285,13 +286,13 @@
 
         function uakStatsHeatmap(options) {
             const source = options !== null && typeof options === "object" ? options : {};
-            const { year, month, summary, today, todayKey } = source;
+            const { year, month, summary, today, todayKey, columns = UAK_HEAT_DEFAULT_COLUMNS } = source;
             const h = react.createElement;
             const monthParam = uakStatsMonthParam(month);
             const latestKey = typeof todayKey === "string"
                 ? todayKey : typeof today === "string" ? today : uakTodayKey(today);
             const matrix = latestKey !== null && uakPerDayEntries(summary).length > 0
-                ? uakHeatMatrix(summary, latestKey)
+                ? uakHeatMatrix(summary, latestKey, columns)
                 : null;
             if (matrix === null) return null;
             const weeks = [];
