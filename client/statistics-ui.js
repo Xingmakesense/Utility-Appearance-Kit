@@ -358,11 +358,12 @@
                                                         formatNumber: number
                                                     })
                                                     : h("div", {
+                                                        className: "uak-statsOverview",
                                                         role: "tabpanel",
                                                         id: "uak-stats-tabpanel-overview",
                                                         "aria-labelledby": "uak-stats-tab-overview"
                                                     },
-                                                        h("div", { ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
+                                                        h("div", { className: "uak-statsMetricsWrap", ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
                                                         h("div", { className: "uak-statsContent" },
                                                             heatFits ? h("div", { className: "uak-statsHeatScroll" },
                                                                 uakStatsHeatmap({ year, month, summary, today })

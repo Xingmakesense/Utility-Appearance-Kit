@@ -50,12 +50,12 @@
 .uak-statsYearLabel { min-width: 48px; color: var(--dsw-alias-label-secondary); font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
 .uak-statsIconButton {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 24px; padding: 0; border: 0; border-radius: 5px;
-    background: transparent; color: var(--dsw-alias-label-tertiary);
-    font-size: 15px; line-height: 1; cursor: pointer;
+    width: 26px; height: 30px; padding: 0; border: 0; border-radius: 6px;
+    background: transparent; color: var(--dsw-alias-label-secondary);
+    font-size: 16px; line-height: 1; cursor: pointer;
 }
 .uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
-.uak-statsIconButton:disabled { opacity: .3; cursor: default; }
+.uak-statsIconButton:disabled { opacity: .55; cursor: default; }
 .uak-statsIconButton:focus-visible, .uak-statsMonth:focus-visible, .uak-statsRange:focus-visible, .uak-statsTab:focus-visible {
     outline: 2px solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: 2px;
 }
@@ -65,10 +65,13 @@
     align-items: start; gap: 0; flex: 1 1 auto; min-width: 0; max-width: none; padding-top: 2px;
     touch-action: none; user-select: none; -webkit-user-select: none;
 }
+/* The rail passes through the middle of the dots: dot centre = 4px of padding
+   plus half of 11px, so a 6px rail sits at 6.5px. Opaque by request. */
 .uak-statsMonths::before {
-    content: ""; position: absolute; left: 4%; right: 4%; top: 7px; height: 3px;
-    border-radius: 2px;
-    background: var(--dsw-alias-border-l2); pointer-events: none;
+    content: ""; position: absolute; left: 4%; right: 4%; top: 6.5px; height: 6px;
+    border-radius: 3px;
+    background: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+    pointer-events: none; opacity: 1;
 }
 .uak-statsMonth {
     position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -76,13 +79,25 @@
     color: var(--dsw-alias-label-tertiary); font-size: 9px; cursor: pointer;
 }
 .uak-statsMonthDot {
-    display: block; width: 11px; height: 11px; border: 3px solid var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    border-radius: 50%; background: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+    display: block; width: 11px; height: 11px; border: 0; border-radius: 50%;
+    background: var(--dsw-alias-border-l3, var(--dsw-alias-border-l2));
+    box-shadow: 0 0 0 2px var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+    opacity: 1;
 }
-.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: var(--dsw-alias-state-business-primary); opacity: .55; }
+.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot {
+    background: var(--dsw-alias-state-business-primary); opacity: 1;
+}
 .uak-statsMonth[aria-pressed="true"] { color: var(--dsw-alias-label-primary); font-weight: 600; }
-.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: var(--dsw-alias-state-business-primary); opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent); }
+.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot {
+    background: var(--dsw-alias-state-business-primary); opacity: 1;
+    box-shadow: 0 0 0 2px var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base)),
+        0 0 0 4px var(--dsw-alias-state-business-primary);
+}
 .uak-statsBody { height: var(--uak-stats-height, 360px); min-height: 0; margin-top: 6px; overflow: hidden; display: flex; flex-direction: column; }
+/* The overview tab owns the body's full height, so the metrics sit on top, the
+   heat band absorbs the slack and the note row stays pinned at the bottom. */
+.uak-statsOverview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+.uak-statsMetricsWrap { flex: none; min-height: 0; }
 .uak-statsMetrics {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     border-top: 1px solid var(--dsw-alias-border-l2);
@@ -95,7 +110,7 @@
 .uak-statsMetric:nth-child(n+4) { border-top: 1px solid var(--dsw-alias-border-l2); }
 .uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: var(--uak-card-label-size, 12px); line-height: var(--uak-card-label-lh, 18px); text-overflow: ellipsis; white-space: nowrap; }
 .uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: var(--uak-card-value-size, 20px); line-height: var(--uak-card-value-lh, 27px); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uak-statsContent { display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; margin-top: 12px; overflow: hidden; min-height: 0; }
+.uak-statsContent { display: flex; flex-direction: column; flex: 1 1 auto; gap: 8px; margin-top: 12px; overflow: hidden; min-height: 0; }
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
 /* Heat band: week columns, height set by the cell size so it never collapses. */
 .uak-statsHeatScroll {
@@ -136,9 +151,12 @@
 .uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio, .uak-statsBookTitle { display: none; }
 .uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
 .uak-statsBookAmount { color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; }
+/* Its own row under the band, mirroring .uak-statsTopline: a divider, full
+   width, text on the left and the legend pinned right, one line only. */
 .uak-statsNote {
     display: flex; align-items: center; gap: 12px; flex: none;
-    min-width: 0; margin-top: 10px; white-space: nowrap;
+    min-width: 0; width: 100%; margin-top: auto; padding-top: 10px;
+    border-top: 1px solid var(--dsw-alias-border-l2); white-space: nowrap;
 }
 .uak-statsNote > .uak-statsBook { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
 .uak-statsNote .uak-statsBookDescription { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
