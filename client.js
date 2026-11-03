@@ -2493,7 +2493,10 @@ const UAK_SETTINGS_CSS = `
             return date.toISOString().slice(0, 10);
         }
 
-        function uakHeatMatrix(summary, todayKey, columns = UAK_HEAT_DEFAULT_COLUMNS) {
+        // The rolling grid keeps the SELECTED month as its threshold key, so the
+        // first-month flat table and the later p60-based split still follow the
+        // month the user is looking at, not the month the grid happens to start in.
+        function uakHeatMatrix(summary, todayKey, columns = UAK_HEAT_DEFAULT_COLUMNS, thresholdMonth) {
             const entries = uakPerDayEntries(summary);
             if (entries.length === 0) return null;
             const [year, month, day] = todayKey.split("-").map(Number);
@@ -2501,7 +2504,8 @@ const UAK_SETTINGS_CSS = `
             const columnCount = Math.max(1, Math.floor(Number(columns) || UAK_HEAT_DEFAULT_COLUMNS));
             const count = columnCount * UAK_HEAT_ROWS;
             const start = anchor - (count - 1) * UAK_HEAT_DAY_MS;
-            const thresholds = uakHeatThresholds(summary, year, month);
+            const key = thresholdMonth !== null && typeof thresholdMonth === "object" ? thresholdMonth : {};
+            const thresholds = uakHeatThresholds(summary, key.year ?? year, key.month ?? month);
             return Array.from({ length: count }, (_, index) => {
                 const date = uakHeatDateKey(new Date(start + index * UAK_HEAT_DAY_MS));
                 const tokens = uakFiniteCount(summary?.perDay?.[date]?.tokens);
@@ -2521,7 +2525,7 @@ const UAK_SETTINGS_CSS = `
             const latestKey = typeof todayKey === "string"
                 ? todayKey : typeof today === "string" ? today : uakTodayKey(today);
             const matrix = latestKey !== null && uakPerDayEntries(summary).length > 0
-                ? uakHeatMatrix(summary, latestKey, columns)
+                ? uakHeatMatrix(summary, latestKey, columns, { year, month })
                 : null;
             if (matrix === null) return null;
             const weeks = [];

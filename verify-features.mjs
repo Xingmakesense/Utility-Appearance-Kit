@@ -107,6 +107,17 @@ assert.equal(heatCells.at(-1).props["data-today"], "true");
 assert.equal(heatCells.at(-1).props["data-level"], 0, "a quiet day still draws its cell");
 assert.equal(heatCells.at(-4).key, "2026-03-01");
 assert.equal(heatCells.at(-4).props["data-level"], 4, "the latest activity uses UAK's existing level");
+// The threshold table follows the SELECTED month, not the month the rolling
+// grid starts in: March uses the p60 table, January uses the first-month table.
+const heatCellOn = (grid, key) => grid.children.flatMap((week) => week.children)
+    .find((cell) => cell.key === key);
+assert.equal(heatCellOn(rollingHeat, "2026-03-01").props["data-level"], 4,
+    "a selected later month uses the adaptive split");
+const januaryHeat = uakStatsHeatmap({
+    year: 2026, month: 1, summary, today: new Date(2026, 2, 4, 12)
+});
+assert.equal(heatCellOn(januaryHeat, "2026-03-01").props["data-level"], 3,
+    "the same day scored by the selected first-month table stays on the flat split");
 assert.equal(heatCells.some((cell) => cell.key === "2026-01-10" && cell.props["data-level"] > 0), true,
     "the rolling grid includes activity from earlier months");
 assert.equal(heatCells.some((cell) => cell.props["data-empty"] === "true"), false,
