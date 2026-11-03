@@ -1,6 +1,6 @@
 # Utility-Appearance-Kit
 
-> 版本 `2.1.6` · 需要 DSH `>= 0.2.1-rc.2`
+> 版本 `2.1.7` · 需要 DSH `>= 0.2.1-rc.2`
 
 **在 DeepSeek Harness 输入区直接拖动推理强度，并查看 DeepSeek 峰谷状态。** 滑条紧贴官方模型选择器左侧，按模型的真实档位数伸缩；订阅卡片与认证已拆分为独立的 `dsh-Subscription-Management`。
 
@@ -116,9 +116,9 @@ pnpm pack --pack-destination dist
 
 ## 外观与月度书卷
 
-原推理强度滑条、峰谷指示、节假日与档位兼容逻辑保持不变。本版还整合了图片壁纸、液态底层与磨砂卡片；DSH 原生导航、按钮、菜单内容和交互保持原生。未加入视频、独立皮肤抽屉、消息字体或气泡改色。
+原推理强度滑条、峰谷指示、节假日与档位兼容逻辑保持不变。外观支持图片／视频壁纸、透明度、滤镜、磨砂卡片、输入框背景、消息气泡、AI 回复文本与对话字体；所有视觉资源使用独立的 `uak-*` 前缀。
 
-- 设置 → **外观与月度书卷**：图片壁纸、显示模式、透明度/模糊/缩放/滤镜、统计面板与数字单位。修改先保存在页面草稿中，点击底部的 **保存配置** 统一应用；需要重启时会明确提示。
+- 设置 → **外观与月度书卷**：图片／视频、显示模式、透明度/模糊/缩放/滤镜、输入框背景、弹出框颗粒、消息与字体、统计面板和数字单位。外观修改实时应用并持久化。
 - 默认首次只读参考原 `dsh-skin-master` 图片配置，之后使用 DSH 数据目录下的 `utility-appearance-kit/settings.json` 和 `assets/`。不会改写原 skin 配置。
 - 空白会话页显示与输入框同宽的月度统计卡。默认当前年月，可切换年份和1–12月；六项指标、月度模型、书籍折算均按所选月份的真实数据计算。
 - 统计卡保留原生卡片布局，使用蓝白配色：浅蓝渐变面板、蓝色边框与强调、蓝色五档热力。深色系统下切换为深蓝可读配色；日期格始终为正方形，不随宽度拉伸。
@@ -127,7 +127,7 @@ pnpm pack --pack-destination dist
 - 书籍对比始终开启，支持随机或固定书目；篇幅分为“短章”（不足5万字）、“中构”（5万至不足30万字）、“鸿篇”（30万字及以上），不同版本字数以约数表示。
 - DSH 下载 Session 日志的弹窗正常展示2秒后仅触发关闭，不自动下载、上传或删除日志；此保护始终启用，无设置开关。
 
-月度聚合只读 DSH 会话日志，解析缓存和累计账本独立保存到 `<DSH_HOME>/utility-appearance-kit/cache/`，不读取或复用原统计插件的账本。删除账本将丢失已从磁盘删除的会话所对应的历史计数。统计接口需要同源自定义请求头，壁纸路由仅接受受支持的图片类型。
+月度聚合只读 DSH 会话日志，解析缓存和累计账本独立保存到 `<DSH_HOME>/utility-appearance-kit/cache/`，不读取或复用原统计插件的账本。删除账本将丢失已从磁盘删除的会话所对应的历史计数。统计接口需要同源自定义请求头，媒体路由仅接受受支持的图片和视频类型。
 
 The statistics card, book catalog, native settings page and save feedback follow the DSH interface language (Simplified Chinese or English). English uses the book titles, `Short / Medium / Epic`, and short number units where automatic units are selected.
 

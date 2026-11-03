@@ -3,7 +3,21 @@
 .uak-settings-intro, .uak-settings-section > p { color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; }
 .uak-settings-section { padding: 16px 0; border-bottom: .5px solid var(--dsw-alias-border-l2); }
 .uak-settings-section h2 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
-.uak-setting-url { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
+.uak-setting-field { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.uak-setting-field > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.uak-setting-field input { min-width: 0; flex: 1; padding: 7px 10px; color: var(--dsw-alias-label-primary); background: rgb(219 234 254 / 12%); border: 1px solid rgb(147 197 253 / 32%); border-radius: 8px; font: inherit; font-size: 12px; }
+.uak-setting-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.uak-setting-toggle { display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px; color: var(--dsw-alias-label-secondary); }
+.uak-setting-toggle input { accent-color: #689fff; }
+.uak-setting-color { display: flex; align-items: center; gap: 10px; margin: 10px 0; color: var(--dsw-alias-label-secondary); font-size: 13px; }
+.uak-setting-color > span { flex: 0 0 100px; }
+.uak-setting-color input { width: 40px; height: 28px; padding: 1px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; cursor: pointer; }
+.uak-setting-color code { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+.uak-bg-preview { position: relative; width: 100%; height: 64px; margin: 10px 0; overflow: hidden; border: 1px dashed var(--dsw-alias-border-l2); border-radius: 8px; background: rgb(0 0 0 / 35%); cursor: grab; touch-action: none; }
+.uak-bg-preview:active { cursor: grabbing; }
+.uak-bg-preview-image { position: absolute; inset: 0; background-repeat: no-repeat; background-size: cover; }
+.uak-font-preview { padding: 8px 0; font-size: 15px; line-height: 22px; color: var(--dsw-alias-label-primary); }
+
 .uak-setting-url input { min-width: 0; flex: 1; padding: 7px 10px; color: #172554; background: rgb(219 234 254 / 32%); border: 1px solid rgb(147 197 253 / 42%); border-radius: 8px; font: inherit; font-size: 12px; }
 .uak-setting-choice { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 12px 0; }
 .uak-setting-choice > span { flex: 0 0 100px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
