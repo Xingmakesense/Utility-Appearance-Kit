@@ -67,6 +67,8 @@
                 "stats.metric.activeDays": "活跃天数",
                 "stats.metric.peakHour": "高峰时段",
                 "stats.metric.favoriteModel": "常用模型",
+                "stats.heatLegendLow": "少",
+                "stats.heatLegendHigh": "多",
                 "stats.tier.short": "短章",
                 "stats.tier.medium": "中构",
                 "stats.tier.epic": "鸿篇"
@@ -127,6 +129,8 @@
                 "stats.metric.activeDays": "Active days",
                 "stats.metric.peakHour": "Peak hour",
                 "stats.metric.favoriteModel": "Favorite model",
+                "stats.heatLegendLow": "Less",
+                "stats.heatLegendHigh": "More",
                 "stats.tier.short": "Short",
                 "stats.tier.medium": "Medium",
                 "stats.tier.epic": "Epic"

@@ -29,6 +29,27 @@ html.uak-liquid [class*='_portal_'], html.uak-liquid [class*='_list_'], html.uak
   backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
   -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
 }
+/* Floating surfaces (hover cards, tooltips, popovers, dropdowns) are frosted:
+   translucent tint over a blur, so the wallpaper shows through while the
+   surface still separates from the page behind it. */
+html.uak-liquid [role="tooltip"],
+html.uak-liquid [class*='_popover'], html.uak-liquid [class*='popover_'],
+html.uak-liquid [class*='_tooltip'], html.uak-liquid [class*='tooltip_'],
+html.uak-liquid [class*='_hoverCard'], html.uak-liquid [class*='hoverCard_'],
+html.uak-liquid [class*='_dropdown'], html.uak-liquid [class*='dropdown_'],
+html.uak-liquid [class*='_flyout'],
+html.uak-liquid [class*='_previewPanel'], html.uak-liquid [class*='_previewPopover'],
+html.uak-liquid [class*='previewContent'], html.uak-liquid [class*='hoverContent'],
+html.uak-liquid [data-radix-popper-content-wrapper],
+html.uak-liquid [data-floating-ui-portal] {
+  background-color: rgba(24 26 30 / var(--uak-pop-alpha, .55)) !important;
+  backdrop-filter: blur(calc(var(--uak-pop-blur, 10px) * 1.5)) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(calc(var(--uak-pop-blur, 10px) * 1.5)) saturate(1.2) !important;
+  color: var(--dsw-alias-label-primary) !important;
+  border: 1px solid rgb(255 255 255 / .14) !important;
+  box-shadow: 0 18px 44px rgb(0 0 0 / .32) !important;
+  border-radius: 10px;
+}
 html.uak-liquid [role="dialog"]::before, html.uak-liquid [role="menu"]::before,
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *::before,
 html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::before, html.uak-liquid [class*='_menu']::before {

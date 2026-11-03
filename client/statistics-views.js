@@ -106,9 +106,10 @@
 .uak-statsDay[data-level="3"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 46%, transparent); }
 .uak-statsDay[data-level="4"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 68%, transparent); }
 .uak-statsDay[data-level="5"] { background: var(--dsw-alias-state-business-primary); }
-.uak-statsLegend { display: flex; flex: 1; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
-.uak-statsLegendItem { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.uak-statsLegendSwatch { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 2px; }
+.uak-statsLegend { display: flex; flex: none; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; }
+.uak-statsLegendScale { display: inline-flex; align-items: center; gap: 3px; }
+.uak-statsLegendEdge { white-space: nowrap; }
+.uak-statsLegendSwatch { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 3px; }
 .uak-statsBook {
     position: static; overflow: visible; padding: 0; border: 0;
     background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
@@ -174,7 +175,7 @@
 .uak-statsMetric:nth-child(n+4) { border-top-color: #e2e8f0; }
 .uak-statsMetricLabel { color: #64748b; }
 .uak-statsMetricValue { color: #172554; }
-.uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus { color: #94a3b8; }
+.uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus { color: #94a3b8; }
 .uak-statsDay { background: #e8edf3; }
 .uak-statsDay[data-level="1"] { background: #dbeafe; }
 .uak-statsDay[data-level="2"] { background: #93c5fd; }
@@ -200,7 +201,7 @@
         box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 8px 30px rgb(0 0 0 / 22%);
     }
     .uak-statsTab, .uak-statsRange, .uak-statsMetricLabel, .uak-statsSectionTitle,
-    .uak-statsWeekday, .uak-statsLegend, .uak-statsStatus, .uak-statsBook,
+    .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus, .uak-statsBook,
     .uak-statsBookDescription, .uak-statsModelValue { color: #bfdbfe; }
     .uak-statsTab[aria-selected="true"], .uak-statsRange[aria-pressed="true"],
     .uak-statsMonth[aria-pressed="true"], .uak-statsBookAmount { color: #eff6ff; }
@@ -283,15 +284,39 @@
 
         // Square day grid: 7 rows, Monday-first, one level per cell. `cells`
         // carries the blanks/dates from uakDayCells, `levels` only the shades.
+        // Weekly matrix: five columns (about 30 days) and always a complete 7-row
+// grid, so the block stays rectangular whatever the panel height is.
+        const UAK_HEAT_ROWS = 7;
+        const UAK_HEAT_COLUMNS = 5;
+
+        function uakHeatMatrix(cells, levels) {
+            const days = Array.isArray(cells) ? cells : [];
+            const shades = Array.isArray(levels) ? levels : [];
+            const pairs = days
+                .map((cell, index) => ({ cell, level: shades[index] }))
+                .filter((pair) => pair.cell !== undefined && pair.cell !== null && pair.cell.blank !== true);
+            const recent = pairs.slice(-(UAK_HEAT_ROWS * UAK_HEAT_COLUMNS));
+            const first = recent[0]?.cell;
+            let lead = 0;
+            if (first !== undefined && typeof first.date === "string") {
+                const [year, month, day] = first.date.split("-").map(Number);
+                if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)) {
+                    lead = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % UAK_HEAT_ROWS;
+                }
+            }
+            const padded = [...Array.from({ length: lead }, () => null), ...recent];
+            while (padded.length % UAK_HEAT_ROWS !== 0) padded.push(null);
+            return padded;
+        }
+
         function uakStatsHeatmap(options) {
             const source = options !== null && typeof options === "object" ? options : {};
             const { year, month, levels, cells, formatValue } = source;
             const h = react.createElement;
             const format = typeof formatValue === "function" ? formatValue : (value) => String(value);
-            const shades = Array.isArray(levels) ? levels : [];
-            const days = Array.isArray(cells) ? cells : [];
             const weekdays = uakStatsT("stats.weekdays");
             const monthParam = uakStatsMonthParam(month);
+            const matrix = uakHeatMatrix(cells, levels);
             return h("div", {
                 className: "uak-statsHeatGrid",
                 role: "img",
@@ -302,39 +327,44 @@
                     className: "uak-statsWeekday",
                     "aria-hidden": "true"
                 }, day)),
-                shades.map((level, index) => {
-                    const cell = days[index];
-                    if (cell === undefined || cell.blank) {
+                matrix.map((pair, index) => {
+                    if (pair === null) {
                         return h("span", {
-                            key: cell?.key ?? `blank-${index}`,
+                            key: `blank-${index}`,
                             className: "uak-statsDay",
                             style: { visibility: "hidden" }
                         });
                     }
                     return h("span", {
-                        key: cell.key,
+                        key: pair.cell.key,
                         className: "uak-statsDay",
-                        "data-level": level,
+                        "data-level": pair.level,
                         title: uakStatsT("stats.cellTitle", {
-                            date: cell.date,
-                            tokens: format(cell.tokens),
-                            messages: format(cell.messages)
+                            date: pair.cell.date,
+                            tokens: format(pair.cell.tokens),
+                            messages: format(pair.cell.messages)
                         })
                     });
                 })
             );
         }
 
+        // Five shades with a low/high cue only: numeric token ranges made the
+        // footer noisy and are intentionally omitted (the title keeps them).
         function uakStatsLegend(legends) {
             const h = react.createElement;
             const items = Array.isArray(legends) ? legends : [];
+            const shades = items.filter((legend) => legend.level > 0);
             return h("div", { className: "uak-statsLegend", "aria-label": uakStatsT("stats.heatLegendAria") },
-                items.filter((legend) => legend.level > 0).map((legend) => h("span", {
-                    key: legend.level,
-                    className: "uak-statsLegendItem"
-                },
-                h("span", { className: "uak-statsLegendSwatch", style: { background: legend.color } }),
-                `${legend.label} Token`)));
+                h("span", { className: "uak-statsLegendEdge" }, uakStatsT("stats.heatLegendLow")),
+                h("span", { className: "uak-statsLegendScale" },
+                    shades.map((legend) => h("span", {
+                        key: legend.level,
+                        className: "uak-statsLegendSwatch",
+                        style: { background: legend.color },
+                        title: legend.label
+                    }))),
+                h("span", { className: "uak-statsLegendEdge" }, uakStatsT("stats.heatLegendHigh")));
         }
 
         // One book compared against the tokens of the active range. The caller
