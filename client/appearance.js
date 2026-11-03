@@ -6,19 +6,26 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
-html.uak-liquid [data-slot="sidebar"] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
-/* L2 composer material is fixed; there is no input image configuration. */
-html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card] { background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; border: 1px solid rgb(255 255 255 / .08) !important; box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important; }
+html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
+/* L2 composer card: the real container is the composer seat's card. */
+html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card],
+html.uak-liquid [class*='_composerSeat'] [class*='_card'] {
+  background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important;
+  backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important;
+  border: 1px solid rgb(255 255 255 / .08) !important;
+  box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important;
+}
 html.uak-liquid [role="dialog"], html.uak-liquid [role="menu"],
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
 html.uak-liquid [class*='_portal_'], html.uak-liquid [class*='_list_'], html.uak-liquid [class*='_menu'] {
-  --dsw-alias-bg-base: rgb(20 21 24) !important;
-  --dsw-alias-bg-layer-1: rgb(26 27 31) !important;
-  --dsw-alias-bg-layer-2: rgb(32 33 38) !important;
-  --dsw-alias-bg-layer-3: rgb(38 39 45) !important;
-  --dsw-specific-sidebar-fill: rgb(24 25 29) !important;
-  --dsw-alias-bg-module-platform: rgb(44 45 52) !important;
-  background-color: rgb(20 21 24) !important;
+  --dsw-alias-bg-base: rgba(18,18,20,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-1: rgba(24,24,27,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-2: rgba(30,30,34,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-3: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
+  --dsw-specific-sidebar-fill: rgba(22,22,24,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-module-platform: rgba(40,40,44,var(--uak-pop-alpha,1)) !important;
+  background-color: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
   backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
   -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
 }
@@ -28,46 +35,7 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
   background-image: none;
 }
-.uak-no-blur [data-slot="sidebar"], .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card], .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-/* Floating surfaces portalled to <body>: hover previews, session cards,
-   tooltips, popovers and dropdowns. They carry hashed module class names, so
-   match the stable role segments and exclude the leaf text/icon parts. */
-html.uak-liquid [role="tooltip"],
-html.uak-liquid [class*='_popover'], html.uak-liquid [class*='popover_'],
-html.uak-liquid [class*='_tooltip'], html.uak-liquid [class*='tooltip_'],
-html.uak-liquid [class*='_hoverCard'], html.uak-liquid [class*='hoverCard_'],
-html.uak-liquid [class*='_hoverPopup'], html.uak-liquid [class*='_flyout'],
-html.uak-liquid [class*='_dropdown'], html.uak-liquid [class*='dropdown_'],
-html.uak-liquid [class*='_previewPanel'], html.uak-liquid [class*='_previewPopover'],
-html.uak-liquid [class*='previewContent'], html.uak-liquid [class*='hoverContent'],
-html.uak-liquid [class*='_diffPreview'], html.uak-liquid [class*='diffPreview'],
-html.uak-liquid [data-radix-popper-content-wrapper],
-html.uak-liquid [data-floating-ui-portal] {
-  --dsw-alias-bg-base: rgb(20 21 24) !important;
-  --dsw-alias-bg-layer-1: rgb(26 27 31) !important;
-  --dsw-alias-bg-layer-2: rgb(32 33 38) !important;
-  --dsw-alias-bg-layer-3: rgb(38 39 45) !important;
-  --dsw-specific-sidebar-fill: rgb(24 25 29) !important;
-  --dsw-alias-bg-module-platform: rgb(44 45 52) !important;
-  background-color: rgb(20 21 24) !important;
-  color: var(--dsw-alias-label-primary) !important;
-  backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
-  -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
-  border: 1px solid rgb(255 255 255 / .1) !important;
-  box-shadow: 0 16px 40px rgb(0 0 0 / .35) !important;
-  border-radius: 10px;
-}
-/* Keep leaf text and icons of those surfaces transparent. */
-html.uak-liquid [class*='hoverTitle'], html.uak-liquid [class*='hoverPath'],
-html.uak-liquid [class*='hoverTime'], html.uak-liquid [class*='hoverStatus'],
-html.uak-liquid [class*='hoverGlyph'], html.uak-liquid [class*='previewHint'],
-html.uak-liquid [class*='previewPath'], html.uak-liquid [class*='visuallyHidden'] {
-  background-color: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
+.uak-no-blur [data-slot="sidebar"], .uak-no-blur [class*='_sidebarCol'], .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card], .uak-no-blur [class*='_composerSeat'] [class*='_card'], .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
 `;
         let uakLastAppearance = null;
