@@ -1,5 +1,9 @@
         const UAK_GLASS_CSS = `
 html.uak-liquid, html.uak-liquid body { background: transparent !important; }
+html.uak-liquid body #root, html.uak-liquid body #app { background: transparent !important; }
+html.uak-liquid,
+html.uak-liquid[data-ds-dark-theme],
+html.uak-liquid[data-ds-light-theme],
 html.uak-liquid body,
 html.uak-liquid body[data-ds-dark-theme],
 html.uak-liquid body[data-ds-light-theme] {
@@ -11,6 +15,7 @@ html.uak-liquid body[data-ds-light-theme] {
   --dsw-alias-bg-module-platform: rgb(219 234 254 / .48) !important;
   --dsw-specific-input-major: rgb(255 255 255 / var(--uak-input-alpha, .4)) !important;
 }
+html.uak-liquid[data-ds-dark-theme],
 html.uak-liquid body[data-ds-dark-theme] {
   --dsw-alias-bg-base: rgb(16 23 36 / var(--uak-surface-alpha, .12)) !important;
   --dsw-alias-bg-layer-1: rgb(31 40 57 / var(--uak-surface-alpha, .12)) !important;
@@ -63,6 +68,11 @@ html.uak-liquid body[data-ds-dark-theme] {
             const root = document.documentElement;
             root.classList.add("uak-liquid");
             root.classList.toggle("uak-no-blur", cfg.glassBlur === 0 || cfg.opacity >= 98);
+            if (!cfg.imageUrl) {
+                document.getElementById("uak-skin-root")?.remove();
+                document.querySelector(".uak-liquid-wash")?.remove();
+                return;
+            }
             let layer = document.getElementById("uak-skin-root");
             if (!layer) {
                 layer = document.createElement("div"); layer.id = "uak-skin-root";
