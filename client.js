@@ -1317,62 +1317,19 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
-/* Chat column: its background is only --dsw-alias-bg-base, which the skin
-   turns transparent, so message text used to sit directly on the wallpaper.
-   Give the column its own glass backing (tint, no blur over the text itself). */
-html.uak-liquid [class*='_centerCol'] {
-  background-color: rgb(18 23 33 / var(--uak-bg-alpha, .6)) !important;
-  backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
-}
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_centerCol'] {
-  background-color: rgb(250 251 253 / var(--uak-bg-alpha, .6)) !important;
-}
-/* Right bar and bottom rows share the same bare-background problem. */
-html.uak-liquid [class*='_rightbarCol'] {
-  background-color: rgb(18 23 33 / var(--uak-bg-alpha, .6)) !important;
-  backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
-}
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_rightbarCol'] {
-  background-color: rgb(250 251 253 / var(--uak-bg-alpha, .6)) !important;
-}
-/* Settings/market panels are portalled and previously only got token
-   transparency; back them with the same glass so their labels read. */
-html.uak-liquid [role="dialog"] {
-  backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
-  -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
-}
 html.uak-liquid [data-slot="sidebar"] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
 /* L2 composer material is fixed; there is no input image configuration. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card] { background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; border: 1px solid rgb(255 255 255 / .08) !important; box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important; }
-/* Light palette: white-tinted glass so the dark text of the light theme keeps
-   its contrast; the dark rules above stay the default for the dark theme. */
-html.uak-liquid body:not([data-ds-dark-theme]) [data-slot="sidebar"] { background-color: rgb(248 250 253 / var(--uak-bg-alpha, .6)) !important; border-color: rgb(15 23 42 / .06) !important; }
-html.uak-liquid body:not([data-ds-dark-theme]) [data-composer-card],
-html.uak-liquid body:not([data-ds-dark-theme]) [data-uak-glass-card] { background-color: rgb(252 253 255 / var(--uak-input-alpha, .7)) !important; border: 1px solid rgb(15 23 42 / .08) !important; box-shadow: 0 8px 32px rgb(15 23 42 / .08) !important; }
-html.uak-liquid body:not([data-ds-dark-theme]) [role="dialog"], html.uak-liquid body:not([data-ds-dark-theme]) [role="menu"],
-html.uak-liquid body:not([data-ds-dark-theme]) [data-shell-overlay="true"] [data-slot] > *,
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_portal_'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_list_'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_menu'] {
-  --dsw-alias-bg-base: rgba(250,251,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-1: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-2: rgba(246,249,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-3: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-  --dsw-specific-sidebar-fill: rgba(248,250,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-module-platform: rgba(226,236,250,var(--uak-pop-alpha,1)) !important;
-  background-color: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-}
-html.uak-liquid body:not([data-ds-dark-theme]) .uak-liquid-wash { background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .1), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .06), transparent 45%); }
 html.uak-liquid [role="dialog"], html.uak-liquid [role="menu"],
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
 html.uak-liquid [class*='_portal_'], html.uak-liquid [class*='_list_'], html.uak-liquid [class*='_menu'] {
-  --dsw-alias-bg-base: rgba(18,18,20,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-1: rgba(24,24,27,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-2: rgba(30,30,34,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-3: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
-  --dsw-specific-sidebar-fill: rgba(22,22,24,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-module-platform: rgba(40,40,44,var(--uak-pop-alpha,1)) !important;
-  background-color: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-base: rgb(20 21 24) !important;
+  --dsw-alias-bg-layer-1: rgb(26 27 31) !important;
+  --dsw-alias-bg-layer-2: rgb(32 33 38) !important;
+  --dsw-alias-bg-layer-3: rgb(38 39 45) !important;
+  --dsw-specific-sidebar-fill: rgb(24 25 29) !important;
+  --dsw-alias-bg-module-platform: rgb(44 45 52) !important;
+  background-color: rgb(20 21 24) !important;
   backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
   -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
 }
@@ -1397,41 +1354,19 @@ html.uak-liquid [class*='previewContent'], html.uak-liquid [class*='hoverContent
 html.uak-liquid [class*='_diffPreview'], html.uak-liquid [class*='diffPreview'],
 html.uak-liquid [data-radix-popper-content-wrapper],
 html.uak-liquid [data-floating-ui-portal] {
-  --dsw-alias-bg-base: rgba(18,18,20,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-1: rgba(24,24,27,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-2: rgba(30,30,34,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-3: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
-  --dsw-specific-sidebar-fill: rgba(22,22,24,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-module-platform: rgba(40,40,44,var(--uak-pop-alpha,1)) !important;
-  background-color: rgba(36,36,40,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-base: rgb(20 21 24) !important;
+  --dsw-alias-bg-layer-1: rgb(26 27 31) !important;
+  --dsw-alias-bg-layer-2: rgb(32 33 38) !important;
+  --dsw-alias-bg-layer-3: rgb(38 39 45) !important;
+  --dsw-specific-sidebar-fill: rgb(24 25 29) !important;
+  --dsw-alias-bg-module-platform: rgb(44 45 52) !important;
+  background-color: rgb(20 21 24) !important;
   color: var(--dsw-alias-label-primary) !important;
   backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
   -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) saturate(1.15) !important;
   border: 1px solid rgb(255 255 255 / .1) !important;
   box-shadow: 0 16px 40px rgb(0 0 0 / .35) !important;
   border-radius: 10px;
-}
-html.uak-liquid body:not([data-ds-dark-theme]) [role="tooltip"],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_popover'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='popover_'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_tooltip'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='tooltip_'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_hoverCard'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='hoverCard_'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_hoverPopup'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_flyout'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_dropdown'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='dropdown_'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_previewPanel'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_previewPopover'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='previewContent'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='hoverContent'],
-html.uak-liquid body:not([data-ds-dark-theme]) [class*='_diffPreview'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='diffPreview'],
-html.uak-liquid body:not([data-ds-dark-theme]) [data-radix-popper-content-wrapper],
-html.uak-liquid body:not([data-ds-dark-theme]) [data-floating-ui-portal] {
-  --dsw-alias-bg-base: rgba(250,251,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-1: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-2: rgba(246,249,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-layer-3: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-  --dsw-specific-sidebar-fill: rgba(248,250,253,var(--uak-pop-alpha,1)) !important;
-  --dsw-alias-bg-module-platform: rgba(226,236,250,var(--uak-pop-alpha,1)) !important;
-  background-color: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
-  color: var(--dsw-alias-label-primary) !important;
-  border: 1px solid rgb(15 23 42 / .1) !important;
-  box-shadow: 0 16px 40px rgb(15 23 42 / .18) !important;
 }
 /* Keep leaf text and icons of those surfaces transparent. */
 html.uak-liquid [class*='hoverTitle'], html.uak-liquid [class*='hoverPath'],
@@ -1516,13 +1451,8 @@ html.uak-liquid [class*='previewPath'], html.uak-liquid [class*='visuallyHidden'
             const nodes = uakEnsureSkinNodes();
             const a = Math.min(Math.max(Number(cfg.opacity ?? 100), 0), 100) / 100;
             const tint = (r, g, b) => `rgba(${r},${g},${b},${a})`;
-            // Light and dark palettes: the wallpaper tint must not paint a dark
-            // scrim under the light theme's dark text.
-            const dark = document.body?.hasAttribute("data-ds-dark-theme") === true;
-            const palette = dark
-                ? { base: [18, 18, 20], layer1: [24, 24, 27], layer2: [30, 30, 34], layer3: [36, 36, 40], sidebar: [22, 22, 24], platform: [40, 40, 44] }
-                : { base: [250, 251, 253], layer1: [255, 255, 255], layer2: [246, 249, 253], layer3: [255, 255, 255], sidebar: [248, 250, 253], platform: [226, 236, 250] };
-            nodes.root.style.background = dark ? "#0d1117" : "#eef2f8";
+            const palette = { base: [18, 18, 20], layer1: [24, 24, 27], layer2: [30, 30, 34], layer3: [36, 36, 40], sidebar: [22, 22, 24], platform: [40, 40, 44] };
+            nodes.root.style.background = "#0d1117";
             nodes.media.style.backgroundImage = `url("${uakCssUrlEscape(cfg.imageUrl)}")`;
             nodes.media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : (cfg.imageMode === "contain" ? "contain" : "cover");
             nodes.media.style.backgroundPosition = "center";
@@ -1609,15 +1539,6 @@ html.uak-liquid [class*='previewPath'], html.uak-liquid [class*='visuallyHidden'
             void boot();
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
-            // The host toggles data-ds-dark-theme on <body>; repaint the
-            // palette when it flips instead of waiting for a settings change.
-            const themeObserver = typeof MutationObserver === "function"
-                ? new MutationObserver(() => {
-                    uakLastAppearance = null;
-                    uakApplyAppearance(uakSettingsStore.getState());
-                })
-                : null;
-            themeObserver?.observe(document.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
             if (typeof MutationObserver === "function") {
                 observer = new MutationObserver((records) => {
                     const added = records.some((record) => record.addedNodes.length > 0);
@@ -1637,7 +1558,6 @@ html.uak-liquid [class*='previewPath'], html.uak-liquid [class*='visuallyHidden'
             return () => {
                 disposed = true;
                 if (retry !== null) clearTimeout(retry);
-                themeObserver?.disconnect();
                 observer?.disconnect();
                 if (timer !== null) clearTimeout(timer);
                 unsubscribe?.();
