@@ -91,13 +91,20 @@
 .uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 20px; line-height: 28px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uak-statsContent { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
-.uak-statsHeatScroll { overflow-x: auto; max-width: 100%; padding: 0 0 5px; scrollbar-width: thin; }
+.uak-statsHeatScroll { width: 100%; max-width: 100%; padding: 0; overflow: visible; }
 .uak-statsHeatGrid {
+    display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr);
+    gap: 4px; width: 100%;
+}
     display: grid; grid-template-rows: repeat(7, 18px); grid-auto-flow: column;
     grid-auto-columns: 18px; grid-auto-rows: 18px; gap: 4px; width: max-content;
 }
-.uak-statsWeekday { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--dsw-alias-label-caption, var(--dsw-alias-label-tertiary)); font-size: 9px; }
+.uak-statsWeekday { display: none; }
 .uak-statsDay {
+    display: block; width: auto; height: auto; min-height: 12px; aspect-ratio: auto;
+    border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
+}
     display: block; flex: none; width: 18px; height: 18px; aspect-ratio: 1;
     border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
@@ -106,7 +113,7 @@
 .uak-statsDay[data-level="3"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 46%, transparent); }
 .uak-statsDay[data-level="4"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 68%, transparent); }
 .uak-statsDay[data-level="5"] { background: var(--dsw-alias-state-business-primary); }
-.uak-statsLegend { display: flex; flex: none; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; }
+.uak-statsLegend { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; }
 .uak-statsLegendScale { display: inline-flex; align-items: center; gap: 3px; }
 .uak-statsLegendEdge { white-space: nowrap; }
 .uak-statsLegendSwatch { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 3px; }
@@ -135,6 +142,8 @@
 .uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
 .uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
 .uak-statsFooter { display: flex; align-items: flex-start; gap: 16px; margin-top: 10px; }
+.uak-statsLegendRow { display: flex; justify-content: flex-end; margin-top: 10px; }
+.uak-statsDay[data-today="true"] { box-shadow: inset 0 0 0 1.5px var(--dsw-alias-label-primary); }
 @media (max-width: 720px) {
     .uak-statsFrame { padding: 14px; }
     .uak-statsTopline { align-items: flex-start; }
@@ -176,7 +185,10 @@
 .uak-statsMetricLabel { color: #64748b; }
 .uak-statsMetricValue { color: #172554; }
 .uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus { color: #94a3b8; }
-.uak-statsDay { background: #e8edf3; }
+.uak-statsDay {
+    display: block; width: auto; height: auto; min-height: 12px; aspect-ratio: auto;
+    border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
+}
 .uak-statsDay[data-level="1"] { background: #dbeafe; }
 .uak-statsDay[data-level="2"] { background: #93c5fd; }
 .uak-statsDay[data-level="3"] { background: #60a5fa; }
@@ -278,7 +290,7 @@
                 className: "uak-statsMetric"
             },
             h("div", { className: "uak-statsMetricLabel" }, metric.label),
-            h("div", { className: "uak-statsMetricValue", title: String(metric.value) },
+            h("div", { className: "uak-statsMetricValue" },
                 metric.format === "text" ? metric.value : format(metric.value)))));
         }
 
@@ -289,12 +301,13 @@
         const UAK_HEAT_ROWS = 7;
         const UAK_HEAT_COLUMNS = 5;
 
-        function uakHeatMatrix(cells, levels) {
+        function uakHeatMatrix(cells, levels, todayKey) {
             const days = Array.isArray(cells) ? cells : [];
             const shades = Array.isArray(levels) ? levels : [];
             const pairs = days
                 .map((cell, index) => ({ cell, level: shades[index] }))
-                .filter((pair) => pair.cell !== undefined && pair.cell !== null && pair.cell.blank !== true);
+                .filter((pair) => pair.cell !== undefined && pair.cell !== null && pair.cell.blank !== true)
+                .filter((pair) => typeof todayKey !== "string" || pair.cell.date <= todayKey);
             const recent = pairs.slice(-(UAK_HEAT_ROWS * UAK_HEAT_COLUMNS));
             const first = recent[0]?.cell;
             let lead = 0;
@@ -305,45 +318,37 @@
                 }
             }
             const padded = [...Array.from({ length: lead }, () => null), ...recent];
+            // Pad the tail so today lands in the last rendered row of the grid.
             while (padded.length % UAK_HEAT_ROWS !== 0) padded.push(null);
             return padded;
         }
 
         function uakStatsHeatmap(options) {
             const source = options !== null && typeof options === "object" ? options : {};
-            const { year, month, levels, cells, formatValue } = source;
+            const { year, month, levels, cells, todayKey } = source;
             const h = react.createElement;
-            const format = typeof formatValue === "function" ? formatValue : (value) => String(value);
-            const weekdays = uakStatsT("stats.weekdays");
             const monthParam = uakStatsMonthParam(month);
-            const matrix = uakHeatMatrix(cells, levels);
+            const matrix = uakHeatMatrix(cells, levels, todayKey);
             return h("div", {
                 className: "uak-statsHeatGrid",
                 role: "img",
                 "aria-label": uakStatsT("stats.heatAria", { year, month: monthParam })
             },
-                weekdays.map((day, index) => h("span", {
-                    key: `${day}-${index}`,
-                    className: "uak-statsWeekday",
-                    "aria-hidden": "true"
-                }, day)),
                 matrix.map((pair, index) => {
                     if (pair === null) {
                         return h("span", {
                             key: `blank-${index}`,
                             className: "uak-statsDay",
-                            style: { visibility: "hidden" }
+                            "data-empty": "true",
+                            "aria-hidden": "true"
                         });
                     }
+                    const isToday = typeof todayKey === "string" && pair.cell.date === todayKey;
                     return h("span", {
                         key: pair.cell.key,
                         className: "uak-statsDay",
                         "data-level": pair.level,
-                        title: uakStatsT("stats.cellTitle", {
-                            date: pair.cell.date,
-                            tokens: format(pair.cell.tokens),
-                            messages: format(pair.cell.messages)
-                        })
+                        ...(isToday ? { "data-today": "true" } : {})
                     });
                 })
             );
@@ -362,7 +367,6 @@
                         key: legend.level,
                         className: "uak-statsLegendSwatch",
                         style: { background: legend.color },
-                        title: legend.label
                     }))),
                 h("span", { className: "uak-statsLegendEdge" }, uakStatsT("stats.heatLegendHigh")));
         }
@@ -384,7 +388,7 @@
                     h("div", { className: "uak-statsBookEyebrow" },
                         `${mode === "random" ? uakStatsT("stats.bookRandom") : uakStatsT("stats.bookSelected")} · ${uakBookTier(bookStats)}`),
                     h("h3", { className: "uak-statsBookTitle" }, uakStatsT("stats.bookTitle", { title: titleParam })),
-                    h("div", { className: "uak-statsBookEnglish", title: bookStats.englishTitle }, bookStats.englishTitle),
+                    h("div", { className: "uak-statsBookEnglish" }, bookStats.englishTitle),
                     h("p", { className: "uak-statsBookDescription" }, uakStatsT("stats.bookDescription", {
                         title: titleParam,
                         chars: {
@@ -425,7 +429,7 @@
             rows.length === 0
                 ? uakStatsStatus(uakStatsT("stats.noModels", { range: rangeLabel }))
                 : rows.map((model) => h("div", { key: model.id, className: "uak-statsModelRow" },
-                    h("span", { className: "uak-statsModelId", title: model.id }, model.id),
+                    h("span", { className: "uak-statsModelId" }, model.id),
                     h("span", null, format(model.tokens)),
                     h("span", null, format(model.messages)))));
         }

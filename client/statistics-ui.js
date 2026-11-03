@@ -229,23 +229,23 @@
                                     }
                                 }, uakStatsRangeLabel(id))))
                         ),
+                        h("div", { className: "uak-statsYear" },
+                            h("button", {
+                                type: "button",
+                                className: "uak-statsIconButton",
+                                "aria-label": uakStatsT("stats.prevYear"),
+                                disabled: previousYear === undefined,
+                                onClick: () => chooseYear(previousYear)
+                            }, "‹"),
+                            h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
+                            h("button", {
+                                type: "button",
+                                className: "uak-statsIconButton",
+                                "aria-label": uakStatsT("stats.nextYear"),
+                                disabled: nextYear === undefined,
+                                onClick: () => chooseYear(nextYear)
+                            }, "›")),
                         h("div", { className: "uak-statsPeriod" },
-                            h("div", { className: "uak-statsYear" },
-                                h("button", {
-                                    type: "button",
-                                    className: "uak-statsIconButton",
-                                    "aria-label": uakStatsT("stats.prevYear"),
-                                    disabled: previousYear === undefined,
-                                    onClick: () => chooseYear(previousYear)
-                                }, "‹"),
-                                h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
-                                h("button", {
-                                    type: "button",
-                                    className: "uak-statsIconButton",
-                                    "aria-label": uakStatsT("stats.nextYear"),
-                                    disabled: nextYear === undefined,
-                                    onClick: () => chooseYear(nextYear)
-                                }, "›")),
                             h("span", { className: "uak-statsMonthLabel" }, range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint")),
                             uakStatsMonthTrack({
                                 year,
@@ -303,7 +303,7 @@
                                                                     month,
                                                                     levels: heatmap.levels,
                                                                     cells: sourceCells,
-                                                                    formatValue: number
+                                                                    todayKey: uakTodayKey(today)
                                                                 })
                                                             ),
                                                             h("div", { className: "uak-statsFooter" },
@@ -314,7 +314,9 @@
                                                                     range,
                                                                     units,
                                                                     formatNumber: number
-                                                                }),
+                                                                })
+                                                            ),
+                                                            h("div", { className: "uak-statsLegendRow" },
                                                                 uakStatsLegend(heatmap.legends)
                                                             )
                                                         )
