@@ -72,6 +72,20 @@
                 const abortRef = react.useRef(null);
                 const monthTrackRef = react.useRef(null);
                 const monthPointerRef = react.useRef(null);
+                const panelRef = react.useRef(null);
+                const [viewportWidth, setViewportWidth] = react.useState(
+                    typeof window === "undefined" ? 1104 : window.innerWidth
+                );
+
+                react.useEffect(() => {
+                    if (typeof ResizeObserver !== "function" || panelRef.current === null) return undefined;
+                    const observer = new ResizeObserver(([entry]) => {
+                        const width = Math.round(entry?.contentRect?.width ?? 0);
+                        if (width > 0) setViewportWidth(width);
+                    });
+                    observer.observe(panelRef.current);
+                    return () => observer.disconnect();
+                }, [visible]);
 
                 react.useEffect(() => uakSubscribeUiLocale(setUiRevision), []);
                 react.useEffect(() => {
@@ -124,7 +138,6 @@
                     () => uakMonthHeatmap(summary, year, month, settings.units),
                     [summary, year, month, settings.units]
                 );
-                const sourceCells = uakDayCells(summary, year, month);
                 const mode = settings.bookMode === "selected" ? "selected" : "random";
                 const selectedBook = mode === "selected" ? uakBookByTitle(settings.bookTitle) : undefined;
                 const book = selectedBook ?? (mode === "selected" ? null : randomBook);
@@ -192,27 +205,47 @@
 
                 const rangeLabel = uakStatsRangeLabel(range);
                 const empty = request.status === "ready" && current.tokens === 0 && current.messages === 0;
-                const noSelectedMonth = request.status === "ready" && range === "month" && !monthHasData;
+                const noSelectedMonth = request.status === "ready" && tab === "models" && range === "month" && !monthHasData;
 
                 const bodyHeight = Number.isFinite(Number(settings.bodyHeight))
                     ? Math.max(180, Math.min(900, Number(settings.bodyHeight))) : 360;
 
                 if (!visible) return null;
 
-                // Cell size follows the panel height so the matrix always fits:
-                // shrink the heat cells first, then the gaps; never scroll.
-                // Cell cap matches the reference band (22px); a shorter panel
-                // shrinks cells down to an 8px floor before the gaps tighten.
-                const heatCell = Math.max(8, Math.min(22, Math.floor((bodyHeight - 200) / 8.2)));
-                const heatGap = heatCell >= 12 ? 4 : 3;
+                // Match the reference's height budget: fixed metrics/footer are
+                // subtracted, then the square-cell cap shrinks before its gaps.
+                // No viewport-derived type sizing and no cell flex collapsing.
+                const metricRows = viewportWidth <= 720 ? 3 : 2;
+                const heatTiers = [
+                    { minCell: 10, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
+                    { minCell: 7, pad: 4, gap: 3, cardPad: 8, label: 12, labelLh: 18, value: 20, valueLh: 27 },
+                    { minCell: 5, pad: 2, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
+                ];
+                let heatLayout = heatTiers[0];
+                for (const tier of heatTiers) {
+                    const fixed = 96 + (metricRows - 2) * (tier.cardPad * 2 + 45) + 49;
+                    const cell = Math.floor((bodyHeight - fixed - tier.pad * 2 - tier.gap * 6) / 7);
+                    heatLayout = { ...tier, cell };
+                    if (cell >= tier.minCell) break;
+                }
+                const heatPadding = heatLayout.pad;
+                const heatGap = heatLayout.gap;
+                const heatCell = Math.min(22, heatLayout.cell);
 
                 return h("section", {
+                    ref: panelRef,
                     className: "uak-stats",
                     "aria-label": uakStatsT("stats.section"),
                     style: {
                         "--uak-stats-height": `${bodyHeight}px`,
                         "--uak-heat-cell": `${heatCell}px`,
-                        "--uak-heat-gap": `${heatGap}px`
+                        "--uak-heat-gap": `${heatGap}px`,
+                        "--uak-heat-pad": `${heatPadding}px`,
+                        "--uak-card-pad": `${heatLayout.cardPad}px`,
+                        "--uak-card-label-size": `${heatLayout.label}px`,
+                        "--uak-card-label-lh": `${heatLayout.labelLh}px`,
+                        "--uak-card-value-size": `${heatLayout.value}px`,
+                        "--uak-card-value-lh": `${heatLayout.valueLh}px`
                     }
                 },
                     h("div", { className: "uak-statsFrame" },
@@ -308,15 +341,7 @@
                                                     },
                                                         uakStatsMetricCards(current.metrics, number),
                                                         h("div", { className: "uak-statsContent" },
-                                                            h("div", { className: "uak-statsHeatScroll" },
-                                                                uakStatsHeatmap({
-                                                                    year,
-                                                                    month,
-                                                                    levels: heatmap.levels,
-                                                                    cells: sourceCells,
-                                                                    todayKey: uakTodayKey(today)
-                                                                })
-                                                            ),
+                                                            uakStatsHeatmap({ year, month, summary, today }),
                                                             h("div", { className: "uak-statsFooter" },
                                                                 uakStatsBookComparison({
                                                                     book,
