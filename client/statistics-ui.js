@@ -73,19 +73,29 @@
                 const monthTrackRef = react.useRef(null);
                 const monthPointerRef = react.useRef(null);
                 const panelRef = react.useRef(null);
+                const metricsRef = react.useRef(null);
+                const footerRef = react.useRef(null);
                 const [viewportWidth, setViewportWidth] = react.useState(
                     typeof window === "undefined" ? 1104 : window.innerWidth
                 );
+                const [measured, setMeasured] = react.useState({ metrics: 0, footer: 0 });
 
                 react.useEffect(() => {
-                    if (typeof ResizeObserver !== "function" || panelRef.current === null) return undefined;
-                    const observer = new ResizeObserver(([entry]) => {
-                        const width = Math.round(entry?.contentRect?.width ?? 0);
+                    if (typeof ResizeObserver !== "function") return undefined;
+                    const observer = new ResizeObserver(() => {
+                        const width = Math.round(panelRef.current?.contentRect?.width
+                            ?? panelRef.current?.getBoundingClientRect().width ?? 0);
                         if (width > 0) setViewportWidth(width);
+                        const metrics = Math.round(metricsRef.current?.getBoundingClientRect().height ?? 0);
+                        const footer = Math.round(footerRef.current?.getBoundingClientRect().height ?? 0);
+                        setMeasured((current) => (current.metrics === metrics && current.footer === footer
+                            ? current : { metrics, footer }));
                     });
-                    observer.observe(panelRef.current);
+                    for (const node of [panelRef.current, metricsRef.current, footerRef.current]) {
+                        if (node) observer.observe(node);
+                    }
                     return () => observer.disconnect();
-                }, [visible]);
+                }, [visible, tab, request.status, range, year, month]);
 
                 react.useEffect(() => uakSubscribeUiLocale(setUiRevision), []);
                 react.useEffect(() => {
@@ -215,22 +225,34 @@
                 // Match the reference's height budget: fixed metrics/footer are
                 // subtracted, then the square-cell cap shrinks before its gaps.
                 // No viewport-derived type sizing and no cell flex collapsing.
-                const metricRows = viewportWidth <= 720 ? 3 : 2;
                 const heatTiers = [
-                    { minCell: 10, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
-                    { minCell: 7, pad: 4, gap: 3, cardPad: 8, label: 12, labelLh: 18, value: 20, valueLh: 27 },
-                    { minCell: 5, pad: 2, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
+                    { minCell: 16, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
+                    { minCell: 11, pad: 6, gap: 3, cardPad: 9, label: 12, labelLh: 18, value: 18, valueLh: 24 },
+                    { minCell: 8, pad: 4, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
                 ];
-                let heatLayout = heatTiers[0];
+                // Measured heights when available; conservative estimates until
+                // the first measurement lands. 12 = content margin-top, 8 = gap
+                // between the band and the footer, 5 = row gaps inside a column.
+                const metricsHeight = measured.metrics > 0 ? measured.metrics : (viewportWidth <= 720 ? 158 : 108);
+                const footerHeight = measured.footer > 0 ? measured.footer : 20;
+                let heatLayout = heatTiers[heatTiers.length - 1];
+                let heatCell = heatTiers[heatTiers.length - 1].minCell;
                 for (const tier of heatTiers) {
-                    const fixed = 96 + (metricRows - 2) * (tier.cardPad * 2 + 45) + 49;
-                    const cell = Math.floor((bodyHeight - fixed - tier.pad * 2 - tier.gap * 6) / 7);
+                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * 5;
+                    const cell = Math.floor(avail / UAK_HEAT_ROWS);
                     heatLayout = { ...tier, cell };
-                    if (cell >= tier.minCell) break;
+                    if (cell >= tier.minCell) {
+                        heatCell = Math.min(33, cell);
+                        break;
+                    }
+                    heatCell = Math.max(2, Math.min(33, cell));
                 }
                 const heatPadding = heatLayout.pad;
                 const heatGap = heatLayout.gap;
-                const heatCell = Math.min(22, heatLayout.cell);
+                // The metrics and footer alone can already fill a very short
+                // panel; only then does the band step aside instead of pushing
+                // them out of view.
+                const heatFits = bodyHeight - metricsHeight - footerHeight - 20 >= 40;
 
                 return h("section", {
                     ref: panelRef,
@@ -339,10 +361,10 @@
                                                         id: "uak-stats-tabpanel-overview",
                                                         "aria-labelledby": "uak-stats-tab-overview"
                                                     },
-                                                        uakStatsMetricCards(current.metrics, number),
+                                                        h("div", { ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
                                                         h("div", { className: "uak-statsContent" },
-                                                            uakStatsHeatmap({ year, month, summary, today }),
-                                                            h("div", { className: "uak-statsFooter" },
+                                                            heatFits ? uakStatsHeatmap({ year, month, summary, today }) : null,
+                                                            h("div", { className: "uak-statsFooter", ref: footerRef },
                                                                 uakStatsBookComparison({
                                                                     book,
                                                                     mode,

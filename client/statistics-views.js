@@ -93,7 +93,7 @@
 .uak-statsMetric:nth-child(n+4) { border-top: 1px solid var(--dsw-alias-border-l2); }
 .uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: var(--uak-card-label-size, 12px); line-height: var(--uak-card-label-lh, 18px); text-overflow: ellipsis; white-space: nowrap; }
 .uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: var(--uak-card-value-size, 20px); line-height: var(--uak-card-value-lh, 27px); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uak-statsContent { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; overflow: hidden; min-height: 0; }
+.uak-statsContent { display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; margin-top: 12px; overflow: hidden; min-height: 0; }
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
 /* Heat band: week columns, height set by the cell size so it never collapses. */
 .uak-statsHeatScroll {
@@ -102,15 +102,16 @@
     padding: var(--uak-heat-pad, 8px); border-radius: 10px;
     background: color-mix(in srgb, var(--dsw-alias-bg-module-platform) 20%, transparent);
     justify-content: space-between; overscroll-behavior-x: contain;
-    scrollbar-width: none; width: 100%; max-width: 100%;
+    scrollbar-width: none; width: 100%; max-width: 100%; box-sizing: border-box;
 }
 .uak-statsHeatScroll::-webkit-scrollbar { display: none; }
 .uak-statsHeatWeek {
     display: flex; flex-direction: column; gap: var(--uak-heat-gap, 4px);
-    flex: 1 0 9px; max-width: var(--uak-heat-cell, 22px);
+    flex: 1 0 12px; max-width: var(--uak-heat-cell, 33px);
 }
+.uak-statsHeatWeek > .uak-statsDay { flex: none; }
 .uak-statsDay {
-    display: block; width: 100%; aspect-ratio: 1; border-radius: 2px;
+    display: block; width: 100%; height: var(--uak-heat-cell, 33px); border-radius: 2px;
     background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 12%, transparent); }
@@ -221,9 +222,10 @@
                 metric.format === "text" ? metric.value : format(metric.value)))));
         }
 
-        // A continuous 22-week window, ending today. Unlike the old month
-        // matrix, quiet days remain in place and no cell is height-collapsed.
-        const UAK_HEAT_DAYS = 7;
+        // A continuous 22-week window, ending today. The top row is dropped, so
+        // a column holds six cells; quiet days remain in place.
+        const UAK_HEAT_ROWS = 6;
+        const UAK_HEAT_DAYS = UAK_HEAT_ROWS;
         const UAK_HEAT_WEEKS = 22;
         const UAK_HEAT_DAY_MS = 86400000;
 

@@ -6,38 +6,12 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
-/* The sidebar keeps a tint only: a backdrop-filter on this element would make
-   it the containing block for the host's position:fixed collapse toggle and
-   push that button out of the top strip. The glass is a script-injected child
-   layer instead (see uakMountSidebarGlass). */
+/* No pseudo element and no injected layer here: a backdrop-filter (or a new
+   stacking layer) on the sidebar is what moved the host's fixed collapse
+   toggle, and the overlay also hid sidebar content. A flat tint only. */
 html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] {
-  position: relative;
   background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important;
   border-color: rgb(255 255 255 / .05) !important;
-}
-.uak-sidebar-glass {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.35) brightness(1.04);
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.35) brightness(1.04);
-  background:
-    linear-gradient(180deg,
-      rgb(255 255 255 / .10) 0%,
-      rgb(255 255 255 / .03) 18%,
-      rgb(255 255 255 / 0) 42%,
-      rgb(0 0 0 / .08) 100%),
-    radial-gradient(120% 60% at 12% 0%, rgb(120 170 255 / .16), transparent 62%),
-    radial-gradient(90% 50% at 92% 100%, rgb(90 120 220 / .10), transparent 60%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / .16),
-    inset 0 -1px 0 rgb(0 0 0 / .22);
-}
-.uak-no-blur .uak-sidebar-glass {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 /* L2 composer card: the real container is the composer seat's card. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card],
@@ -200,28 +174,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 const wash = document.createElement("div"); wash.className = "uak-liquid-wash"; wash.setAttribute("aria-hidden", "true"); document.body.append(wash);
             }
         }
-        // The host renders the sidebar column with its own class hash; keep one
-        // glass child inside it and drop stale ones. Never put backdrop-filter
-        // on the column itself (see the CSS comment above).
-        function uakMountSidebarGlass() {
-            if (typeof document === "undefined") return;
-            const columns = document.querySelectorAll("[data-slot='sidebar'], [class*='_sidebarCol']");
-            for (const column of columns) {
-                if (!(column instanceof HTMLElement)) continue;
-                if (column.querySelector(":scope > .uak-sidebar-glass")) continue;
-                const glass = document.createElement("div");
-                glass.className = "uak-sidebar-glass";
-                glass.setAttribute("aria-hidden", "true");
-                column.prepend(glass);
-            }
-            for (const glass of document.querySelectorAll(".uak-sidebar-glass")) {
-                if (!(glass instanceof HTMLElement)) continue;
-                if (!glass.parentElement || !glass.parentElement.closest("[data-slot='sidebar'], [class*='_sidebarCol']")) {
-                    glass.remove();
-                }
-            }
-        }
-
         function uakMarkGlassSurfaces(root = document) {
             if (typeof document === "undefined") return;
             const candidates = [];
@@ -271,7 +223,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             void boot();
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
-            uakMountSidebarGlass();
             if (typeof MutationObserver === "function") {
                 observer = new MutationObserver((records) => {
                     const added = records.some((record) => record.addedNodes.length > 0);
