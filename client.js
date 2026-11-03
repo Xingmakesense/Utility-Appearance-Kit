@@ -2968,6 +2968,46 @@ function uakCreateSettingsPage() {
                     options.map(([id, text]) => h("button", { key: id, type: "button", className: "uak-chip", "data-active": value === id ? "true" : "false", "aria-pressed": value === id, onClick: () => onChange(id) }, text))));
             const UrlInput = ({ label, value, onChange }) => h("label", { className: "uak-setting-field" }, h("span", null, label), h("input", { type: "text", value, placeholder: "https://…", onChange: (event) => onChange(event.target.value) }));
             const Section = ({ title, children }) => h("section", { className: "uak-settings-section" }, h("h2", null, title), children);
+            // TEMPORARY runtime probe: surface what the appearance engine can
+            // actually see, so a failing wallpaper can be diagnosed without
+            // guessing. Removed once the wallpaper renders.
+            const Probe = () => {
+                const [rows, setRows] = react.useState([]);
+                react.useEffect(() => {
+                    const read = () => {
+                        const root = document.documentElement;
+                        const layer = document.getElementById("uak-skin-root");
+                        const media = layer && layer.querySelector("#uak-skin-media");
+                        const style = document.getElementById("uak-skin-css");
+                        const frame = document.querySelector('[class*="_frame"], .frame');
+                        const token = getComputedStyle(root).getPropertyValue("--dsw-alias-bg-base").trim();
+                        const bodyToken = document.body ? getComputedStyle(document.body).getPropertyValue("--dsw-alias-bg-base").trim() : "";
+                        const state = uakSettingsStore.getState();
+                        setRows([
+                            ["html.uak-liquid", String(root.classList.contains("uak-liquid"))],
+                            ["#uak-skin-root", layer ? "present" : "missing"],
+                            ["layer in DOM", layer ? String(document.body.contains(layer)) : "-"],
+                            ["layer z-index", layer ? getComputedStyle(layer).zIndex : "-"],
+                            ["#uak-skin-media bg", media ? (media.style.backgroundImage || "(empty)").slice(0, 90) : "-"],
+                            ["#uak-skin-css", style ? "present" : "missing"],
+                            ["css rules", style ? String(style.textContent.length) : "-"],
+                            ["html token", token || "(empty)"],
+                            ["body token", bodyToken || "(empty)"],
+                            ["frame bg", frame ? getComputedStyle(frame).backgroundColor : "(no frame)"],
+                            ["store.imageUrl", state.imageUrl || "(empty)"],
+                            ["store.opacity", String(state.opacity)],
+                            ["signature", String(uakLastAppearance).length > 200 ? "(set)" : String(uakLastAppearance).slice(0, 80)]
+                        ]);
+                    };
+                    read();
+                    const timer = window.setInterval(read, 1000);
+                    return () => window.clearInterval(timer);
+                }, []);
+                return h("details", { className: "uak-probe", style: { margin: "8px 0 16px", fontSize: "12px" } },
+                    h("summary", { style: { cursor: "pointer" } }, uakTr("运行时诊断（临时）", "Runtime probe (temporary)")),
+                    h("pre", { style: { whiteSpace: "pre-wrap", lineHeight: "1.5", margin: "6px 0", userSelect: "text" } },
+                        rows.map((row) => row[0] + ": " + row[1]).join(String.fromCharCode(10))));
+            };
             return function UakSettingsPage() {
                 const [, setRevision] = react.useState(0);
                 const [draft, setDraft] = react.useState(uakSettingsStore.getState);
@@ -2992,6 +3032,7 @@ function uakCreateSettingsPage() {
                 };
                 return h("div", { className: "uak-settings" },
                     h("p", { className: "uak-settings-intro" }, uakTr("图片壁纸、磨砂材质与月度书卷。外观设置实时保存。", "Image wallpaper, frosted materials, and monthly books. Appearance changes save live.")),
+                    h(Probe, null),
                     h(Section, { title: uakTr("图片壁纸", "Image wallpaper") },
                         h(UrlInput, { label: uakTr("图片 URL", "Image URL"), value: draft.imageUrl, onChange: (value) => update({ imageUrl: value }) }),
                         h("div", { className: "uak-setting-actions" }, h("input", { ref: imageRef, hidden: true, type: "file", accept: "image/*", onChange: (event) => chooseImage(event.target.files?.[0]) }), h("button", { type: "button", className: "uak-chip", disabled: saving, onClick: () => imageRef.current?.click() }, uakTr("选择图片", "Choose image")), h("button", { type: "button", className: "uak-chip", onClick: () => update({ imageUrl: "" }) }, uakTr("清除背景", "Clear background"))),
