@@ -78,7 +78,12 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             if (typeof document === "undefined" || !document.body) return;
             const cfg = uakSanitizeSettings(settings);
             const signature = JSON.stringify(cfg);
-            if (signature === uakLastAppearance) return;
+            // Reference: applySkin re-checks the live DOM on every call, so a
+            // host-side wipe of the layer is rebuilt even when the config did
+            // not change. Only a fully intact layer may take the shortcut.
+            const layerAlive = uakSkinNodes !== null && document.body.contains(uakSkinNodes.root);
+            const styleAlive = uakSkinStyleTag !== null && uakSkinStyleTag.isConnected;
+            if (signature === uakLastAppearance && layerAlive && styleAlive) return;
             uakLastAppearance = signature;
             const root = document.documentElement;
             if (!cfg.imageUrl) {
@@ -168,6 +173,22 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             if (!attach()) {
                 return () => { disposed = true; if (retry !== null) clearTimeout(retry); };
             }
+            // Reference: initSkin retries the host load before applying. The
+            // web server can still be cold on the first paint, and a single
+            // failed fetch used to leave the wallpaper off for the session.
+            const boot = async () => {
+                for (let attempt = 0; attempt < 5 && !disposed; attempt += 1) {
+                    try {
+                        const settings = await uakLoadSettings();
+                        if (!disposed) uakApplyAppearance(settings);
+                        return;
+                    } catch {
+                        await new Promise((resolve) => setTimeout(resolve, 400));
+                    }
+                }
+                if (!disposed) uakApplyAppearance(uakSettingsStore.getState());
+            };
+            void boot();
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
             if (typeof MutationObserver === "function") {
@@ -185,7 +206,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 });
                 observer.observe(document.body, { childList: true, subtree: true });
             }
-            void uakLoadSettings().then(uakApplyAppearance);
             unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
             return () => {
                 disposed = true;
