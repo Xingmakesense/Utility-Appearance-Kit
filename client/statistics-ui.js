@@ -199,10 +199,19 @@
 
                 if (!visible) return null;
 
+                // Cell size follows the panel height so the matrix always fits:
+                // shrink the heat cells first, then the gaps; never scroll.
+                const heatCell = Math.max(8, Math.min(18, Math.round((bodyHeight - 190) / 8.4)));
+                const heatGap = heatCell >= 12 ? 4 : 3;
+
                 return h("section", {
                     className: "uak-stats",
                     "aria-label": uakStatsT("stats.section"),
-                    style: { "--uak-stats-height": `${bodyHeight}px` }
+                    style: {
+                        "--uak-stats-height": `${bodyHeight}px`,
+                        "--uak-heat-cell": `${heatCell}px`,
+                        "--uak-heat-gap": `${heatGap}px`
+                    }
                 },
                     h("div", { className: "uak-statsFrame" },
                         h("header", { className: "uak-statsTopline" },
@@ -234,6 +243,7 @@
                                         disabled: nextYear === undefined,
                                         onClick: () => chooseYear(nextYear)
                                     }, "›")),
+                                h("span", { className: "uak-statsMonthLabel" }, range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint")),
                                 uakStatsMonthTrack({
                                     year,
                                     month,
