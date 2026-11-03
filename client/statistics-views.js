@@ -47,11 +47,12 @@
 .uak-statsRange:hover { color: var(--dsw-alias-label-primary); }
 .uak-statsPeriod { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .uak-statsYear { display: inline-flex; align-items: center; gap: 2px; flex: none; }
-.uak-statsYearLabel { min-width: 44px; color: var(--dsw-alias-label-secondary); font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.uak-statsYearLabel { min-width: 48px; color: var(--dsw-alias-label-secondary); font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
 .uak-statsIconButton {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 20px; height: 22px; padding: 0; border: 0; border-radius: 5px;
-    background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer;
+    width: 22px; height: 24px; padding: 0; border: 0; border-radius: 5px;
+    background: transparent; color: var(--dsw-alias-label-tertiary);
+    font-size: 15px; line-height: 1; cursor: pointer;
 }
 .uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
 .uak-statsIconButton:disabled { opacity: .3; cursor: default; }
@@ -65,7 +66,8 @@
     touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .uak-statsMonths::before {
-    content: ""; position: absolute; left: 4%; right: 4%; top: 8px; height: 1px;
+    content: ""; position: absolute; left: 4%; right: 4%; top: 7px; height: 3px;
+    border-radius: 2px;
     background: var(--dsw-alias-border-l2); pointer-events: none;
 }
 .uak-statsMonth {

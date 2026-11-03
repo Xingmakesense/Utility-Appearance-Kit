@@ -1620,7 +1620,7 @@ const UAK_SETTINGS_CSS = `
                 "stats.nextYear": "下一个有数据年份",
                 "stats.year": "{year} 年",
                 "stats.monthOverview": "{month} 月",
-                "stats.monthHint": "月份选择（切换后回到月视图）",
+                "stats.monthHint": "月份选择",
                 "stats.rangeGroup": "统计范围",
                 "stats.range.month": "月度",
                 "stats.range.all": "全部",
@@ -1682,7 +1682,7 @@ const UAK_SETTINGS_CSS = `
                 "stats.nextYear": "Next year with activity",
                 "stats.year": "{year}",
                 "stats.monthOverview": "Month {month}",
-                "stats.monthHint": "Choose a month to return to the monthly view",
+                "stats.monthHint": "Choose a month",
                 "stats.rangeGroup": "Statistics range",
                 "stats.range.month": "Month",
                 "stats.range.all": "All",
@@ -2276,11 +2276,12 @@ const UAK_SETTINGS_CSS = `
 .uak-statsRange:hover { color: var(--dsw-alias-label-primary); }
 .uak-statsPeriod { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .uak-statsYear { display: inline-flex; align-items: center; gap: 2px; flex: none; }
-.uak-statsYearLabel { min-width: 44px; color: var(--dsw-alias-label-secondary); font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.uak-statsYearLabel { min-width: 48px; color: var(--dsw-alias-label-secondary); font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; }
 .uak-statsIconButton {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 20px; height: 22px; padding: 0; border: 0; border-radius: 5px;
-    background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer;
+    width: 22px; height: 24px; padding: 0; border: 0; border-radius: 5px;
+    background: transparent; color: var(--dsw-alias-label-tertiary);
+    font-size: 15px; line-height: 1; cursor: pointer;
 }
 .uak-statsIconButton:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
 .uak-statsIconButton:disabled { opacity: .3; cursor: default; }
@@ -2294,7 +2295,8 @@ const UAK_SETTINGS_CSS = `
     touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .uak-statsMonths::before {
-    content: ""; position: absolute; left: 4%; right: 4%; top: 8px; height: 1px;
+    content: ""; position: absolute; left: 4%; right: 4%; top: 7px; height: 3px;
+    border-radius: 2px;
     background: var(--dsw-alias-border-l2); pointer-events: none;
 }
 .uak-statsMonth {
