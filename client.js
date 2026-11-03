@@ -2334,13 +2334,14 @@ const UAK_SETTINGS_CSS = `
     scrollbar-width: none; width: 100%; max-width: 100%; box-sizing: border-box;
 }
 .uak-statsHeatScroll::-webkit-scrollbar { display: none; }
+.uak-statsHeatGrid { display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px); width: 100%; }
 .uak-statsHeatWeek {
     display: flex; flex-direction: column; gap: var(--uak-heat-gap, 4px);
-    flex: 1 0 12px; max-width: var(--uak-heat-cell, 33px);
+    flex: 1 0 0; max-width: var(--uak-heat-cell, 22px); min-width: 0;
 }
-.uak-statsHeatWeek > .uak-statsDay { flex: none; }
 .uak-statsDay {
-    display: block; width: 100%; height: var(--uak-heat-cell, 33px); border-radius: 2px;
+    display: block; width: 100%; height: var(--uak-heat-cell, 22px); flex: none;
+    border-radius: 2px;
     background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 12%, transparent); }
@@ -2362,7 +2363,12 @@ const UAK_SETTINGS_CSS = `
 .uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio, .uak-statsBookTitle { display: none; }
 .uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
 .uak-statsBookAmount { color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; }
-.uak-statsFooter { display: flex; align-items: center; gap: 16px; flex: none; min-width: 0; flex-wrap: wrap; margin-top: 0; }
+.uak-statsNote {
+    display: flex; align-items: center; gap: 12px; flex: none;
+    min-width: 0; margin-top: 10px; white-space: nowrap;
+}
+.uak-statsNote > .uak-statsBook { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.uak-statsNote .uak-statsBookDescription { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uak-statsModels { margin-top: 0; }
 .uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; }
 .uak-statsModelRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(70px, auto); gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l2); }
@@ -2385,7 +2391,7 @@ const UAK_SETTINGS_CSS = `
     .uak-statsMetric:nth-child(n) { padding-left: 0; }
     .uak-statsMetric:nth-child(even) { padding-left: 14px; }
     .uak-statsMetric:nth-child(n+3) { border-top: 1px solid var(--dsw-alias-border-l2); }
-    .uak-statsFooter { align-items: flex-start; }
+    .uak-statsNote { gap: 8px; }
     .uak-statsLegend { justify-content: flex-start; margin-left: 0; }
 }`;
 
@@ -2451,61 +2457,68 @@ const UAK_SETTINGS_CSS = `
                 metric.format === "text" ? metric.value : format(metric.value)))));
         }
 
-        // A continuous 22-week window, ending today. The top row is dropped, so
-        // a column holds six cells; quiet days remain in place.
-        const UAK_HEAT_ROWS = 6;
-        const UAK_HEAT_DAYS = UAK_HEAT_ROWS;
-        const UAK_HEAT_WEEKS = 22;
-        const UAK_HEAT_DAY_MS = 86400000;
+        // 2.5.0 month matrix: 7 rows per column, Monday-first, 22 columns, and
+        // the latest day lands in the bottom-right cell.
+        const UAK_HEAT_ROWS = 7;
+        const UAK_HEAT_COLUMNS = 22;
 
-        function uakHeatStamp(key) {
-            if (typeof key !== "string") return NaN;
-            const [year, month, day] = key.split("-").map(Number);
-            return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
-                ? Date.UTC(year, month - 1, day) : NaN;
-        }
-
-        function uakHeatWeeks(summary, today) {
-            const end = new Date(today);
-            const todayKey = uakTodayKey(end);
-            const todayStamp = uakHeatStamp(todayKey);
-            const latestLogged = Object.entries(summary?.perDay ?? {})
-                .map(([date, day]) => ({ date, stamp: uakHeatStamp(date), day }))
-                .filter((entry) => !Number.isNaN(entry.stamp))
-                .sort((left, right) => left.stamp - right.stamp)
-                .at(-1);
-            const endStamp = Math.max(todayStamp, latestLogged?.stamp ?? todayStamp);
-            const startStamp = endStamp - (UAK_HEAT_DAYS * UAK_HEAT_WEEKS - 1) * UAK_HEAT_DAY_MS;
-            const weeks = [];
-            for (let day = 0; day < UAK_HEAT_DAYS * UAK_HEAT_WEEKS; day += 1) {
-                const key = new Date(startStamp + day * UAK_HEAT_DAY_MS).toISOString().slice(0, 10);
-                const raw = summary?.perDay?.[key];
-                const normalized = uakNormalizeDay(raw);
-                if (day % UAK_HEAT_DAYS === 0) weeks.push([]);
-                weeks[weeks.length - 1].push({ key, ...normalized });
+        function uakHeatMatrix(cells, levels, todayKey) {
+            const days = Array.isArray(cells) ? cells : [];
+            const shades = Array.isArray(levels) ? levels : [];
+            const pairs = days
+                .map((cell, index) => ({ cell, level: shades[index] }))
+                .filter((pair) => pair.cell !== undefined && pair.cell !== null && pair.cell.blank !== true)
+                .filter((pair) => typeof todayKey !== "string" || pair.cell.date <= todayKey);
+            const recent = pairs.slice(-(UAK_HEAT_ROWS * UAK_HEAT_COLUMNS));
+            const first = recent[0]?.cell;
+            let lead = 0;
+            if (first !== undefined && typeof first.date === "string") {
+                const [year, month, day] = first.date.split("-").map(Number);
+                if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)) {
+                    lead = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % UAK_HEAT_ROWS;
+                }
             }
-            return { weeks, todayKey };
+            const padded = [...Array.from({ length: lead }, () => null), ...recent];
+            while (padded.length % UAK_HEAT_ROWS !== 0) padded.push(null);
+            return padded;
         }
 
         function uakStatsHeatmap(options) {
             const source = options !== null && typeof options === "object" ? options : {};
-            const { year, month, summary, today } = source;
+            const { year, month, levels, cells, todayKey } = source;
             const h = react.createElement;
-            const grid = uakHeatWeeks(summary, today);
+            const monthParam = uakStatsMonthParam(month);
+            const matrix = uakHeatMatrix(cells, levels, todayKey);
+            const weeks = [];
+            for (let index = 0; index < matrix.length; index += UAK_HEAT_ROWS) {
+                weeks.push(matrix.slice(index, index + UAK_HEAT_ROWS));
+            }
             return h("div", {
-                className: "uak-statsHeatScroll",
+                className: "uak-statsHeatGrid",
                 role: "img",
                 "aria-label": uakStatsT("stats.heatAria", { year, month: uakStatsMonthParam(month) })
-            }, grid.weeks.map((week, weekIndex) => h("div", {
-                key: "week-" + weekIndex,
-                className: "uak-statsHeatWeek"
-            }, week.map((day) => h("span", {
-                key: day.key,
-                className: "uak-statsDay",
-                "data-level": uakHeatLevel(day.tokens, uakHeatThresholds(summary, year, month)),
-                "aria-label": day.key,
-                ...(day.key === grid.todayKey ? { "data-today": "true" } : {})
-            })))));
+            },
+                weeks.map((week, weekIndex) => h("div", {
+                    key: `week-${weekIndex}`,
+                    className: "uak-statsHeatWeek"
+                }, week.map((pair, dayIndex) => {
+                    if (pair === null) {
+                        return h("span", {
+                            key: `blank-${weekIndex}-${dayIndex}`,
+                            className: "uak-statsDay",
+                            "data-empty": "true",
+                            "aria-hidden": "true"
+                        });
+                    }
+                    const isToday = typeof todayKey === "string" && pair.cell.date === todayKey;
+                    return h("span", {
+                        key: pair.cell.key,
+                        className: "uak-statsDay",
+                        "data-level": pair.level,
+                        ...(isToday ? { "data-today": "true" } : {})
+                    });
+                })))
+            );
         }
 
         // Five shades with a low/high cue only: numeric token ranges made the
@@ -2818,26 +2831,27 @@ const UAK_SETTINGS_CSS = `
                 // subtracted, then the square-cell cap shrinks before its gaps.
                 // No viewport-derived type sizing and no cell flex collapsing.
                 const heatTiers = [
-                    { minCell: 16, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
-                    { minCell: 11, pad: 6, gap: 3, cardPad: 9, label: 12, labelLh: 18, value: 18, valueLh: 24 },
-                    { minCell: 8, pad: 4, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
+                    { minCell: 18, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
+                    { minCell: 13, pad: 6, gap: 3, cardPad: 9, label: 12, labelLh: 18, value: 18, valueLh: 24 },
+                    { minCell: 9, pad: 4, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
                 ];
                 // Measured heights when available; conservative estimates until
-                // the first measurement lands. 12 = content margin-top, 8 = gap
-                // between the band and the footer, 5 = row gaps inside a column.
+                // the first measurement lands. 20 = content margin-top plus the
+                // gap above the note row, 6 = row gaps inside a column.
                 const metricsHeight = measured.metrics > 0 ? measured.metrics : (viewportWidth <= 720 ? 158 : 108);
                 const footerHeight = measured.footer > 0 ? measured.footer : 20;
+                const heatRows = 7;
                 let heatLayout = heatTiers[heatTiers.length - 1];
                 let heatCell = heatTiers[heatTiers.length - 1].minCell;
                 for (const tier of heatTiers) {
-                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * 5;
-                    const cell = Math.floor(avail / UAK_HEAT_ROWS);
+                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
+                    const cell = Math.floor(avail / heatRows);
                     heatLayout = { ...tier, cell };
                     if (cell >= tier.minCell) {
-                        heatCell = Math.min(33, cell);
+                        heatCell = Math.min(22, cell);
                         break;
                     }
-                    heatCell = Math.max(2, Math.min(33, cell));
+                    heatCell = Math.max(2, Math.min(22, cell));
                 }
                 const heatPadding = heatLayout.pad;
                 const heatGap = heatLayout.gap;
@@ -2955,18 +2969,22 @@ const UAK_SETTINGS_CSS = `
                                                     },
                                                         h("div", { ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
                                                         h("div", { className: "uak-statsContent" },
-                                                            heatFits ? uakStatsHeatmap({ year, month, summary, today }) : null,
-                                                            h("div", { className: "uak-statsFooter", ref: footerRef },
-                                                                uakStatsBookComparison({
-                                                                    book,
-                                                                    mode,
-                                                                    tokens: current.tokens,
-                                                                    range,
-                                                                    units,
-                                                                    formatNumber: number
-                                                                }),
-                                                                uakStatsLegend(heatmap.legends)
-                                                            )
+                                                            heatFits ? h("div", { className: "uak-statsHeatScroll" },
+                                                                uakStatsHeatmap({ year, month, summary, today })
+                                                            ) : null
+                                                        ),
+                                                        // The note lives on its own row below the heat band,
+                                                        // never inside it, and stays a single line.
+                                                        h("div", { className: "uak-statsNote", ref: footerRef },
+                                                            uakStatsBookComparison({
+                                                                book,
+                                                                mode,
+                                                                tokens: current.tokens,
+                                                                range,
+                                                                units,
+                                                                formatNumber: number
+                                                            }),
+                                                            uakStatsLegend(heatmap.legends)
                                                         )
                                                     )
                                     )

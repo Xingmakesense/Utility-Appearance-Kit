@@ -226,26 +226,27 @@
                 // subtracted, then the square-cell cap shrinks before its gaps.
                 // No viewport-derived type sizing and no cell flex collapsing.
                 const heatTiers = [
-                    { minCell: 16, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
-                    { minCell: 11, pad: 6, gap: 3, cardPad: 9, label: 12, labelLh: 18, value: 18, valueLh: 24 },
-                    { minCell: 8, pad: 4, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
+                    { minCell: 18, pad: 8, gap: 4, cardPad: 11, label: 12, labelLh: 18, value: 20, valueLh: 27 },
+                    { minCell: 13, pad: 6, gap: 3, cardPad: 9, label: 12, labelLh: 18, value: 18, valueLh: 24 },
+                    { minCell: 9, pad: 4, gap: 2, cardPad: 6, label: 11, labelLh: 16, value: 15, valueLh: 20 }
                 ];
                 // Measured heights when available; conservative estimates until
-                // the first measurement lands. 12 = content margin-top, 8 = gap
-                // between the band and the footer, 5 = row gaps inside a column.
+                // the first measurement lands. 20 = content margin-top plus the
+                // gap above the note row, 6 = row gaps inside a column.
                 const metricsHeight = measured.metrics > 0 ? measured.metrics : (viewportWidth <= 720 ? 158 : 108);
                 const footerHeight = measured.footer > 0 ? measured.footer : 20;
+                const heatRows = 7;
                 let heatLayout = heatTiers[heatTiers.length - 1];
                 let heatCell = heatTiers[heatTiers.length - 1].minCell;
                 for (const tier of heatTiers) {
-                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * 5;
-                    const cell = Math.floor(avail / UAK_HEAT_ROWS);
+                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
+                    const cell = Math.floor(avail / heatRows);
                     heatLayout = { ...tier, cell };
                     if (cell >= tier.minCell) {
-                        heatCell = Math.min(33, cell);
+                        heatCell = Math.min(22, cell);
                         break;
                     }
-                    heatCell = Math.max(2, Math.min(33, cell));
+                    heatCell = Math.max(2, Math.min(22, cell));
                 }
                 const heatPadding = heatLayout.pad;
                 const heatGap = heatLayout.gap;
@@ -363,18 +364,22 @@
                                                     },
                                                         h("div", { ref: metricsRef }, uakStatsMetricCards(current.metrics, number)),
                                                         h("div", { className: "uak-statsContent" },
-                                                            heatFits ? uakStatsHeatmap({ year, month, summary, today }) : null,
-                                                            h("div", { className: "uak-statsFooter", ref: footerRef },
-                                                                uakStatsBookComparison({
-                                                                    book,
-                                                                    mode,
-                                                                    tokens: current.tokens,
-                                                                    range,
-                                                                    units,
-                                                                    formatNumber: number
-                                                                }),
-                                                                uakStatsLegend(heatmap.legends)
-                                                            )
+                                                            heatFits ? h("div", { className: "uak-statsHeatScroll" },
+                                                                uakStatsHeatmap({ year, month, summary, today })
+                                                            ) : null
+                                                        ),
+                                                        // The note lives on its own row below the heat band,
+                                                        // never inside it, and stays a single line.
+                                                        h("div", { className: "uak-statsNote", ref: footerRef },
+                                                            uakStatsBookComparison({
+                                                                book,
+                                                                mode,
+                                                                tokens: current.tokens,
+                                                                range,
+                                                                units,
+                                                                formatNumber: number
+                                                            }),
+                                                            uakStatsLegend(heatmap.legends)
                                                         )
                                                     )
                                     )
