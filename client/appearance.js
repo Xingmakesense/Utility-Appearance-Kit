@@ -47,9 +47,34 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
 `;
         let uakLastAppearance = null;
         const uakCssUrlEscape = (value) => String(value).replace(/["\\]/g, "\\$&");
+        // Reference: skin-master tint() writes these tokens as inline CSS. UAK
+        // repeats them inline so the wallpaper is visible even when a host
+        // stylesheet replaces or reorders the injected glass sheet.
+        const UAK_SURFACE_TOKENS = Object.freeze({
+            "--dsw-alias-bg-base": "18,18,20",
+            "--dsw-alias-bg-layer-1": "24,24,27",
+            "--dsw-alias-bg-layer-2": "30,30,34",
+            "--dsw-alias-bg-layer-3": "36,36,40",
+            "--dsw-specific-sidebar-fill": "22,22,24",
+            "--dsw-alias-bg-module-platform": "40,40,44"
+        });
+        function uakApplySurfaceTokens(alpha) {
+            const value = String(alpha);
+            for (const target of [document.documentElement, document.body]) {
+                for (const [name, rgb] of Object.entries(UAK_SURFACE_TOKENS)) {
+                    target.style.setProperty(name, `rgba(${rgb},${value})`, "important");
+                }
+            }
+        }
+        function uakClearSurfaceTokens() {
+            for (const target of [document.documentElement, document.body]) {
+                for (const name of Object.keys(UAK_SURFACE_TOKENS)) target.style.removeProperty(name);
+            }
+        }
         function uakClearAppearance(root) {
             root.classList.remove("uak-liquid", "uak-no-blur");
             for (const name of ["--uak-bg-alpha", "--uak-input-alpha", "--uak-glass-blur", "--uak-pop-alpha", "--uak-pop-blur", "--uak-pop-grain"]) root.style.removeProperty(name);
+            uakClearSurfaceTokens();
             document.getElementById("uak-skin-root")?.remove();
             document.querySelector(".uak-liquid-wash")?.remove();
         }
@@ -72,11 +97,19 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             root.style.setProperty("--uak-input-alpha", String(cfg.glassOpacity / 100));
             root.style.setProperty("--uak-glass-blur", `${cfg.glassBlur}px`);
             root.style.setProperty("--uak-stats-height", `${cfg.bodyHeight}px`);
+            // Inline token fallback: the wallpaper must stay visible even when
+            // the injected glass sheet loses to a host stylesheet.
+            uakApplySurfaceTokens(cfg.opacity / 100);
             let layer = document.getElementById("uak-skin-root");
             if (!layer) {
                 layer = document.createElement("div"); layer.id = "uak-skin-root";
                 const media = document.createElement("div"); media.id = "uak-skin-media";
                 const blur = document.createElement("div"); blur.id = "uak-skin-blur";
+                // Reference: ensureSkinNodes(). Inline geometry keeps the layer
+                // visible independently of the injected stylesheet.
+                layer.style.cssText = "position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:#0d1117";
+                media.style.cssText = "position:absolute;inset:0;width:100%;height:100%";
+                blur.style.cssText = "position:absolute;inset:0;pointer-events:none";
                 layer.append(media, blur); document.body.prepend(layer);
             }
             const media = layer.querySelector("#uak-skin-media");
@@ -112,26 +145,48 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             }
         }
         function uakMountAppearance() {
-            if (typeof document === "undefined" || !document.body) return () => {};
+            if (typeof document === "undefined") return () => {};
+            let disposed = false;
+            let retry = null;
+            let unsubscribe = null;
+            let observer = null;
+            let timer = null;
+            // The composer/page can materialize the plugin before document.body
+            // exists; retry instead of silently disabling the wallpaper.
+            const attach = () => {
+                if (disposed || document.body) return true;
+                retry = setTimeout(attach, 50);
+                return false;
+            };
+            if (!attach()) {
+                return () => { disposed = true; if (retry !== null) clearTimeout(retry); };
+            }
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
-            let timer = null;
-            const observer = typeof MutationObserver === "function" ? new MutationObserver((records) => {
-                const added = records.some((record) => record.addedNodes.length > 0);
-                if (!added || timer !== null) return;
-                timer = setTimeout(() => {
-                    timer = null;
-                    for (const record of records) {
-                        for (const node of record.addedNodes) {
-                            if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+            if (typeof MutationObserver === "function") {
+                observer = new MutationObserver((records) => {
+                    const added = records.some((record) => record.addedNodes.length > 0);
+                    if (!added || timer !== null) return;
+                    timer = setTimeout(() => {
+                        timer = null;
+                        for (const record of records) {
+                            for (const node of record.addedNodes) {
+                                if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+                            }
                         }
-                    }
-                }, 80);
-            }) : null;
-            observer.observe(document.body, { childList: true, subtree: true });
+                    }, 80);
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
             void uakLoadSettings().then(uakApplyAppearance);
-            const unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
-            return () => { observer.disconnect(); if (timer !== null) clearTimeout(timer); unsubscribe(); };
+            unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+            return () => {
+                disposed = true;
+                if (retry !== null) clearTimeout(retry);
+                observer?.disconnect();
+                if (timer !== null) clearTimeout(timer);
+                unsubscribe?.();
+            };
         }
         function uakIsSessionLogDialog(element) {
             if (!element || element.closest(".uak-settings")) return false;
