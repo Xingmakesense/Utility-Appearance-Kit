@@ -112,12 +112,10 @@
                 if (typeof ctx.effect === "function") {
                     ctx.effect(() => uakMountUiLocale(ctx));
                     ctx.effect(() => uakMountAppearance());
-                    ctx.effect(() => uakMountSessionLogDismissal());
                 } else {
                     uakMountAppearance();
-                    uakMountSessionLogDismissal();
                 }
-            } catch (error) { console.warn("[utility-appearance-kit] appearance/log dismissal unavailable:", error); }
+            } catch (error) { console.warn("[utility-appearance-kit] appearance unavailable:", error); }
             try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
             try {
                 if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));

@@ -1505,64 +1505,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 unsubscribe?.();
             };
         }
-        function uakIsSessionLogDialog(element) {
-            if (!element || element.closest(".uak-settings")) return false;
-            const text = String(element.textContent || "").replace(/\s+/g, " ").trim();
-            const title = element.querySelector('[role="heading"],h1,h2,h3');
-            const label = `${element.getAttribute("aria-label") || ""} ${title?.textContent || ""} ${text.slice(0, 120)}`;
-            // The actual notification shown by Session export is
-            // "Session 导出已开始下载" / "Session export started".
-            return /(session\s*log|会话日志|session日志|下载日志|session\s*导出已开始下载|session\s*export\s*(started|download))/i.test(label);
-        }
-        function uakMountSessionLogDismissal() {
-            if (typeof document === "undefined") return () => {};
-            const timers = new Set();
-            const closeDialog = (dialog) => {
-                if (!dialog.isConnected) return true;
-                const buttons = [...dialog.querySelectorAll("button,[role='button']")];
-                const close = buttons.find((button) => {
-                    const label = `${button.getAttribute("aria-label") || ""} ${button.getAttribute("title") || ""} ${button.textContent || ""}`.trim();
-                    return /close|关闭|cancel|取消|dismiss|知道了|got it/i.test(label)
-                        && !/download|下载|export|导出|confirm|确认/i.test(label);
-                });
-                if (close) { close.click(); return !dialog.isConnected; }
-                // Host dialogs listen on document/window, not necessarily on
-                // the dialog element itself.
-                for (const target of [dialog, document, window]) {
-                    try { target.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", keyCode: 27, bubbles: true, cancelable: true })); } catch { /* best effort */ }
-                }
-                return !dialog.isConnected;
-            };
-            const inspect = (dialog) => {
-                if (dialog.dataset.uakLogClosing || !uakIsSessionLogDialog(dialog)) return;
-                dialog.dataset.uakLogClosing = "true";
-                const timer = setTimeout(() => {
-                    timers.delete(timer);
-                    if (!closeDialog(dialog)) {
-                        // The dialog may finish rendering after its container
-                        // appears; retry once instead of silently giving up.
-                        const retry = setTimeout(() => { timers.delete(retry); closeDialog(dialog); }, 200);
-                        timers.add(retry);
-                    }
-                    delete dialog.dataset.uakLogClosing;
-                }, 2000);
-                timers.add(timer);
-            };
-            const scanAddedNode = (node) => {
-                if (node.nodeType !== 1) return;
-                if (node.matches('[role="dialog"],[data-shell-overlay="true"] [data-slot] > *')) inspect(node);
-                for (const dialog of node.querySelectorAll('[role="dialog"],[data-shell-overlay="true"] [data-slot] > *')) inspect(dialog);
-            };
-            const observer = new MutationObserver((records) => {
-                for (const record of records) {
-                    if (record.addedNodes.length === 0) continue;
-                    for (const node of record.addedNodes) scanAddedNode(node);
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-            scanAddedNode(document.body);
-            return () => { observer.disconnect(); for (const timer of timers) clearTimeout(timer); timers.clear(); };
-        }
         //#endregion
 
         //#region client/settings-styles.js
@@ -3373,12 +3315,10 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
                 if (typeof ctx.effect === "function") {
                     ctx.effect(() => uakMountUiLocale(ctx));
                     ctx.effect(() => uakMountAppearance());
-                    ctx.effect(() => uakMountSessionLogDismissal());
                 } else {
                     uakMountAppearance();
-                    uakMountSessionLogDismissal();
                 }
-            } catch (error) { console.warn("[utility-appearance-kit] appearance/log dismissal unavailable:", error); }
+            } catch (error) { console.warn("[utility-appearance-kit] appearance unavailable:", error); }
             try { uakMountSettings(ctx); } catch (error) { console.warn("[utility-appearance-kit] settings unavailable:", error); }
             try {
                 if (typeof ctx.effect === "function") ctx.effect(() => uakRegisterUsagePanel(ctx, uakSettingsStore));
