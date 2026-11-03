@@ -26,8 +26,7 @@ html.uak-liquid [role="dialog"]::before, html.uak-liquid [role="menu"]::before,
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *::before,
 html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::before, html.uak-liquid [class*='_menu']::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
-  opacity: var(--uak-pop-grain,0);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: none;
 }
 .uak-no-blur [data-slot="sidebar"], .uak-no-blur [data-composer-card], .uak-no-blur [data-uak-glass-card], .uak-no-blur [role="dialog"], .uak-no-blur [role="menu"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 `;
@@ -69,7 +68,7 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
         }
         function uakClearAppearance(root) {
             root.classList.remove("uak-liquid", "uak-no-blur");
-            for (const name of ["--uak-bg-alpha", "--uak-input-alpha", "--uak-glass-blur", "--uak-pop-alpha", "--uak-pop-blur", "--uak-pop-grain"]) root.style.removeProperty(name);
+            for (const name of ["--uak-bg-alpha", "--uak-input-alpha", "--uak-glass-blur", "--uak-pop-alpha", "--uak-pop-blur"]) root.style.removeProperty(name);
             if (uakSkinStyleTag) uakSkinStyleTag.textContent = "";
             uakRemoveSkinNodes();
             document.querySelector(".uak-liquid-wash")?.remove();
@@ -105,9 +104,9 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             nodes.media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : (cfg.imageMode === "contain" ? "contain" : "cover");
             nodes.media.style.backgroundPosition = "center";
             nodes.media.style.backgroundRepeat = cfg.imageMode === "repeat" ? "repeat" : "no-repeat";
-            nodes.media.style.filter = `brightness(${cfg.brightness}%) contrast(${cfg.contrast}%) saturate(${cfg.saturate}%)`;
-            nodes.media.style.transform = "scale(" + uakScaleRatio(cfg.scale) + ")";
-            nodes.blur.style.backdropFilter = cfg.blur > 0 ? `blur(${cfg.blur}px)` : "none";
+            nodes.media.style.filter = `brightness(${cfg.brightness}%)`;
+            nodes.media.style.transform = "scale(1)";
+            nodes.blur.style.backdropFilter = "none";
             // Reference: applySkin dynamic token rules. A dedicated style tag
             // owns these declarations so a host theme cannot keep an opaque
             // body over the wallpaper.
@@ -131,13 +130,9 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 `--dsw-alias-bg-module-platform:${tint(40,40,44)};`,
                 "}"
             ];
-            if (cfg.blur > 0 && cfg.opacity < 98) {
-                rules.push(`html.uak-liquid body > div > div{backdrop-filter:blur(${cfg.blur}px)}`);
-            }
             uakEnsureSkinStyle().textContent = rules.join("\n");
             root.style.setProperty("--uak-pop-alpha", String(cfg.popBg.alpha / 100));
             root.style.setProperty("--uak-pop-blur", `${cfg.popBg.blur}px`);
-            root.style.setProperty("--uak-pop-grain", String(cfg.popBg.grain * .35 / 100));
             if (!document.querySelector(".uak-liquid-wash")) {
                 const wash = document.createElement("div"); wash.className = "uak-liquid-wash"; wash.setAttribute("aria-hidden", "true"); document.body.append(wash);
             }
