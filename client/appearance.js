@@ -9,6 +9,23 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 html.uak-liquid [data-slot="sidebar"] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
 /* L2 composer material is fixed; there is no input image configuration. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card] { background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; border: 1px solid rgb(255 255 255 / .08) !important; box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important; }
+/* Light palette: white-tinted glass so the dark text of the light theme keeps
+   its contrast; the dark rules above stay the default for the dark theme. */
+html.uak-liquid body:not([data-ds-dark-theme]) [data-slot="sidebar"] { background-color: rgb(248 250 253 / var(--uak-bg-alpha, .6)) !important; border-color: rgb(15 23 42 / .06) !important; }
+html.uak-liquid body:not([data-ds-dark-theme]) [data-composer-card],
+html.uak-liquid body:not([data-ds-dark-theme]) [data-uak-glass-card] { background-color: rgb(252 253 255 / var(--uak-input-alpha, .7)) !important; border: 1px solid rgb(15 23 42 / .08) !important; box-shadow: 0 8px 32px rgb(15 23 42 / .08) !important; }
+html.uak-liquid body:not([data-ds-dark-theme]) [role="dialog"], html.uak-liquid body:not([data-ds-dark-theme]) [role="menu"],
+html.uak-liquid body:not([data-ds-dark-theme]) [data-shell-overlay="true"] [data-slot] > *,
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_portal_'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_list_'], html.uak-liquid body:not([data-ds-dark-theme]) [class*='_menu'] {
+  --dsw-alias-bg-base: rgba(250,251,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-1: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-2: rgba(246,249,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-layer-3: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+  --dsw-specific-sidebar-fill: rgba(248,250,253,var(--uak-pop-alpha,1)) !important;
+  --dsw-alias-bg-module-platform: rgba(226,236,250,var(--uak-pop-alpha,1)) !important;
+  background-color: rgba(255,255,255,var(--uak-pop-alpha,1)) !important;
+}
+html.uak-liquid body:not([data-ds-dark-theme]) .uak-liquid-wash { background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .1), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .06), transparent 45%); }
 html.uak-liquid [role="dialog"], html.uak-liquid [role="menu"],
 html.uak-liquid [data-shell-overlay="true"] [data-slot] > *,
 html.uak-liquid [class*='_portal_'], html.uak-liquid [class*='_list_'], html.uak-liquid [class*='_menu'] {
@@ -100,6 +117,13 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             const nodes = uakEnsureSkinNodes();
             const a = Math.min(Math.max(Number(cfg.opacity ?? 100), 0), 100) / 100;
             const tint = (r, g, b) => `rgba(${r},${g},${b},${a})`;
+            // Light and dark palettes: the wallpaper tint must not paint a dark
+            // scrim under the light theme's dark text.
+            const dark = document.body?.hasAttribute("data-ds-dark-theme") === true;
+            const palette = dark
+                ? { base: [18, 18, 20], layer1: [24, 24, 27], layer2: [30, 30, 34], layer3: [36, 36, 40], sidebar: [22, 22, 24], platform: [40, 40, 44] }
+                : { base: [250, 251, 253], layer1: [255, 255, 255], layer2: [246, 249, 253], layer3: [255, 255, 255], sidebar: [248, 250, 253], platform: [226, 236, 250] };
+            nodes.root.style.background = dark ? "#0d1117" : "#eef2f8";
             nodes.media.style.backgroundImage = `url("${uakCssUrlEscape(cfg.imageUrl)}")`;
             nodes.media.style.backgroundSize = cfg.imageMode === "repeat" ? "auto" : (cfg.imageMode === "contain" ? "contain" : "cover");
             nodes.media.style.backgroundPosition = "center";
@@ -114,20 +138,20 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 "html.uak-liquid,html.uak-liquid body{background:transparent}",
                 "html.uak-liquid body #root,html.uak-liquid body #app{background:transparent}",
                 "html.uak-liquid{",
-                `--dsw-alias-bg-base:${tint(18,18,20)};`,
-                `--dsw-alias-bg-layer-1:${tint(24,24,27)};`,
-                `--dsw-alias-bg-layer-2:${tint(30,30,34)};`,
-                `--dsw-alias-bg-layer-3:${tint(36,36,40)};`,
-                `--dsw-specific-sidebar-fill:${tint(22,22,24)};`,
-                `--dsw-alias-bg-module-platform:${tint(40,40,44)};`,
+                `--dsw-alias-bg-base:${tint(...palette.base)};`,
+                `--dsw-alias-bg-layer-1:${tint(...palette.layer1)};`,
+                `--dsw-alias-bg-layer-2:${tint(...palette.layer2)};`,
+                `--dsw-alias-bg-layer-3:${tint(...palette.layer3)};`,
+                `--dsw-specific-sidebar-fill:${tint(...palette.sidebar)};`,
+                `--dsw-alias-bg-module-platform:${tint(...palette.platform)};`,
                 "}",
                 "html.uak-liquid body{",
-                `--dsw-alias-bg-base:${tint(18,18,20)};`,
-                `--dsw-alias-bg-layer-1:${tint(24,24,27)};`,
-                `--dsw-alias-bg-layer-2:${tint(30,30,34)};`,
-                `--dsw-alias-bg-layer-3:${tint(36,36,40)};`,
-                `--dsw-specific-sidebar-fill:${tint(22,22,24)};`,
-                `--dsw-alias-bg-module-platform:${tint(40,40,44)};`,
+                `--dsw-alias-bg-base:${tint(...palette.base)};`,
+                `--dsw-alias-bg-layer-1:${tint(...palette.layer1)};`,
+                `--dsw-alias-bg-layer-2:${tint(...palette.layer2)};`,
+                `--dsw-alias-bg-layer-3:${tint(...palette.layer3)};`,
+                `--dsw-specific-sidebar-fill:${tint(...palette.sidebar)};`,
+                `--dsw-alias-bg-module-platform:${tint(...palette.platform)};`,
                 "}"
             ];
             uakEnsureSkinStyle().textContent = rules.join("\n");
@@ -186,6 +210,15 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             void boot();
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
+            // The host toggles data-ds-dark-theme on <body>; repaint the
+            // palette when it flips instead of waiting for a settings change.
+            const themeObserver = typeof MutationObserver === "function"
+                ? new MutationObserver(() => {
+                    uakLastAppearance = null;
+                    uakApplyAppearance(uakSettingsStore.getState());
+                })
+                : null;
+            themeObserver?.observe(document.body, { attributes: true, attributeFilter: ["data-ds-dark-theme"] });
             if (typeof MutationObserver === "function") {
                 observer = new MutationObserver((records) => {
                     const added = records.some((record) => record.addedNodes.length > 0);
@@ -205,6 +238,7 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             return () => {
                 disposed = true;
                 if (retry !== null) clearTimeout(retry);
+                themeObserver?.disconnect();
                 observer?.disconnect();
                 if (timer !== null) clearTimeout(timer);
                 unsubscribe?.();
