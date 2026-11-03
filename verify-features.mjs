@@ -27,10 +27,17 @@ globalThis.__DSH_UAK_TEST__ = true;
 let captured;
 globalThis.window = { __ModuleLoader__: { load(spec) { captured = spec; } } };
 await import("./client.js");
-const client = captured.factory((id) => id === "react" ? { createElement: () => ({}) } : {}).__test;
+const client = captured.factory((id) => id === "react" ? {
+    createElement: (type, props, ...children) => ({
+        type,
+        key: props?.key,
+        props: props ?? {},
+        children: children.flat()
+    })
+} : {}).__test;
 const {
     uakBooks, uakBookTier, uakHeatThresholds, uakMonthHeatmap, uakSummarizeMonth,
-    uakSanitizeSettings, uakFormatNumber, uakStatsT,
+    uakSanitizeSettings, uakFormatNumber, uakStatsT, uakStatsHeatmap,
 } = client;
 const day = (tokens, messages = 2, model = "deepseek-flash") => ({
     tokens, messages, hours: Array.from({ length: 24 }, (_, hour) => hour === 14 ? tokens : 0),
@@ -83,6 +90,27 @@ assert.equal(march.levels[6], 4, "March 1 uses the fourth adaptive token level")
 assert.equal(march.levels.at(-1), 0, "an idle day stays neutral");
 assert.equal(march.legends.length, 6, "neutral days plus five token levels");
 assert.equal(uakSummarizeMonth(summary, 2027, 2).tokens, 0, "empty months stay empty");
+const rollingHeat = uakStatsHeatmap({
+    year: 2026, month: 3, summary, today: new Date(2026, 2, 4, 12)
+});
+assert.equal(rollingHeat.props.className, "uak-statsHeatGrid");
+assert.equal(rollingHeat.children.length, 22, "rolling calendar has 22 complete columns");
+for (const week of rollingHeat.children) {
+    assert.equal(week.props.className, "uak-statsHeatWeek");
+    assert.equal(week.children.length, 7, "every heat column has seven cells");
+}
+const heatCells = rollingHeat.children.flatMap((week) => week.children);
+assert.equal(heatCells.length, 154);
+assert.equal(heatCells.at(-1).key, "2026-03-04", "today stays in the bottom-right cell");
+assert.equal(heatCells.at(-1).props["data-today"], "true");
+assert.equal(heatCells.at(-1).props["data-level"], 0, "a quiet day still draws its cell");
+assert.equal(heatCells.at(-4).key, "2026-03-01");
+assert.equal(heatCells.at(-4).props["data-level"], 4, "the latest activity uses UAK's existing level");
+assert.equal(heatCells.some((cell) => cell.key === "2026-01-10" && cell.props["data-level"] > 0), true,
+    "the rolling grid includes activity from earlier months");
+assert.equal(heatCells.some((cell) => cell.props["data-empty"] === "true"), false,
+    "padding dates remain visible instead of collapsing the matrix");
+assert.equal(uakStatsHeatmap({ year: 2026, month: 3, summary: {}, today: "2026-03-04" }), null);
 const defaults = uakSanitizeSettings({});
 assert.equal(defaults.bookMode, "random");
 assert.equal(defaults.bodyHeight, 360);
