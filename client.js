@@ -2246,8 +2246,8 @@ const UAK_SETTINGS_CSS = `
     background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
     box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
 }
-.uak-statsTopline { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.uak-statsTabs { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; }
+.uak-statsTopline { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: nowrap; }
+.uak-statsTabs { display: flex; align-items: center; gap: 20px; flex: none; min-width: 0; }
 .uak-statsTab {
     padding: 3px 0; border: 0; border-bottom: 2px solid transparent;
     background: transparent; color: var(--dsw-alias-label-tertiary);
@@ -2257,7 +2257,7 @@ const UAK_SETTINGS_CSS = `
     color: var(--dsw-alias-label-primary);
     border-bottom-color: var(--dsw-alias-label-primary);
 }
-.uak-statsRanges { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.uak-statsRanges { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-left: auto; }
 .uak-statsRange {
     min-width: 34px; padding: 3px 6px; border: 0; border-radius: 6px;
     background: transparent; color: var(--dsw-alias-label-tertiary);
@@ -2265,7 +2265,7 @@ const UAK_SETTINGS_CSS = `
 }
 .uak-statsRange[aria-pressed="true"] { background: var(--dsw-alias-fill-secondary); color: var(--dsw-alias-label-primary); font-weight: 600; }
 .uak-statsRange:hover { color: var(--dsw-alias-label-primary); }
-.uak-statsPeriod { display: flex; align-items: center; gap: 7px; margin-top: 8px; min-width: 0; }
+.uak-statsPeriod { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
 .uak-statsYear { display: inline-flex; align-items: center; gap: 2px; flex: none; }
 .uak-statsYearLabel { min-width: 50px; color: var(--dsw-alias-label-secondary); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .uak-statsIconButton {
@@ -2280,8 +2280,8 @@ const UAK_SETTINGS_CSS = `
 }
 .uak-statsMonthLabel { color: var(--dsw-alias-label-tertiary); font-size: 12px; white-space: nowrap; }
 .uak-statsMonths {
-    position: relative; display: grid; grid-template-columns: repeat(12, minmax(18px, 1fr));
-    align-items: start; gap: 0; flex: 1; min-width: 180px; max-width: 520px; padding-top: 2px;
+    position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start; gap: 0; flex: 1 1 auto; min-width: 0; max-width: none; padding-top: 2px;
     touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .uak-statsMonths::before {
@@ -2289,7 +2289,7 @@ const UAK_SETTINGS_CSS = `
     background: var(--dsw-alias-border-l2); pointer-events: none;
 }
 .uak-statsMonth {
-    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
     min-width: 0; padding: 2px 0; border: 0; background: transparent;
     color: var(--dsw-alias-label-tertiary); font-size: 9px; cursor: pointer;
 }
@@ -2314,21 +2314,15 @@ const UAK_SETTINGS_CSS = `
 .uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 20px; line-height: 28px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .uak-statsContent { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
-.uak-statsHeatScroll { width: 100%; max-width: 100%; padding: 0; overflow: visible; }
+.uak-statsHeatScroll { width: 100%; max-width: 100%; padding: 0; overflow: hidden; }
 .uak-statsHeatGrid {
     display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr);
     gap: 4px; width: 100%;
 }
-    display: grid; grid-template-rows: repeat(7, 18px); grid-auto-flow: column;
-    grid-auto-columns: 18px; grid-auto-rows: 18px; gap: 4px; width: max-content;
-}
 .uak-statsWeekday { display: none; }
 .uak-statsDay {
-    display: block; width: auto; height: auto; min-height: 12px; aspect-ratio: auto;
-    border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-    display: block; flex: none; width: 18px; height: 18px; aspect-ratio: 1;
+    display: block; width: 100%; height: auto; aspect-ratio: 1;
     border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent); }
@@ -2336,7 +2330,7 @@ const UAK_SETTINGS_CSS = `
 .uak-statsDay[data-level="3"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 46%, transparent); }
 .uak-statsDay[data-level="4"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 68%, transparent); }
 .uak-statsDay[data-level="5"] { background: var(--dsw-alias-state-business-primary); }
-.uak-statsLegend { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; }
+.uak-statsLegend { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; flex: none; }
 .uak-statsLegendScale { display: inline-flex; align-items: center; gap: 3px; }
 .uak-statsLegendEdge { white-space: nowrap; }
 .uak-statsLegendSwatch { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 3px; }
@@ -2364,8 +2358,7 @@ const UAK_SETTINGS_CSS = `
 .uak-statsError { color: var(--dsw-alias-label-error, var(--dsw-alias-state-danger-primary)); }
 .uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
 .uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
-.uak-statsFooter { display: flex; align-items: flex-start; gap: 16px; margin-top: 10px; }
-.uak-statsLegendRow { display: flex; justify-content: flex-end; margin-top: 10px; }
+.uak-statsFooter { display: flex; align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; min-width: 0; }
 .uak-statsDay[data-today="true"] { box-shadow: inset 0 0 0 1.5px var(--dsw-alias-label-primary); }
 @media (max-width: 720px) {
     .uak-statsFrame { padding: 14px; }
@@ -2398,7 +2391,11 @@ const UAK_SETTINGS_CSS = `
 .uak-statsIconButton { color: #64748b; }
 .uak-statsIconButton:hover:not(:disabled) { background: rgb(239 246 255); color: #2563eb; }
 .uak-statsMonths::before { background: #dbe3ef; }
-.uak-statsMonth { color: #94a3b8; }
+.uak-statsMonth {
+    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-width: 0; padding: 2px 0; border: 0; background: transparent;
+    color: var(--dsw-alias-label-tertiary); font-size: 9px; cursor: pointer;
+}
 .uak-statsMonthDot { border-color: rgb(219 234 254); background: #cbd5e1; }
 .uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
 .uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; }
@@ -2409,7 +2406,7 @@ const UAK_SETTINGS_CSS = `
 .uak-statsMetricValue { color: #172554; }
 .uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus { color: #94a3b8; }
 .uak-statsDay {
-    display: block; width: auto; height: auto; min-height: 12px; aspect-ratio: auto;
+    display: block; width: 100%; height: auto; aspect-ratio: 1;
     border-radius: 3px; background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: #dbeafe; }
@@ -2878,6 +2875,41 @@ const UAK_SETTINGS_CSS = `
                                     "aria-controls": `uak-stats-tabpanel-${id}`,
                                     onClick: () => setTab(id)
                                 }, label))),
+                            h("div", { className: "uak-statsPeriod" },
+                                h("div", { className: "uak-statsYear" },
+                                    h("button", {
+                                        type: "button",
+                                        className: "uak-statsIconButton",
+                                        "aria-label": uakStatsT("stats.prevYear"),
+                                        disabled: previousYear === undefined,
+                                        onClick: () => chooseYear(previousYear)
+                                    }, "‹"),
+                                    h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
+                                    h("button", {
+                                        type: "button",
+                                        className: "uak-statsIconButton",
+                                        "aria-label": uakStatsT("stats.nextYear"),
+                                        disabled: nextYear === undefined,
+                                        onClick: () => chooseYear(nextYear)
+                                    }, "›")),
+                                uakStatsMonthTrack({
+                                    year,
+                                    month,
+                                    hasData: hasMonthData,
+                                    onSelect: (value) => {
+                                        setMonth(value);
+                                        setRange("month");
+                                    },
+                                    onKeyDown: onMonthKeyDown,
+                                    rootProps: {
+                                        ref: monthTrackRef,
+                                        onPointerDown: onMonthPointerDown,
+                                        onPointerMove: onMonthPointerMove,
+                                        onPointerUp: onMonthPointerUp,
+                                        onPointerCancel: onMonthPointerUp
+                                    }
+                                })
+                            ),
                             h("div", { className: "uak-statsRanges", role: "group", "aria-label": uakStatsT("stats.rangeGroup") },
                                 ["month", "all", "30d", "7d"].map((id) => h("button", {
                                     key: id,
@@ -2889,42 +2921,6 @@ const UAK_SETTINGS_CSS = `
                                         if (id !== "month") setTab("overview");
                                     }
                                 }, uakStatsRangeLabel(id))))
-                        ),
-                        h("div", { className: "uak-statsYear" },
-                            h("button", {
-                                type: "button",
-                                className: "uak-statsIconButton",
-                                "aria-label": uakStatsT("stats.prevYear"),
-                                disabled: previousYear === undefined,
-                                onClick: () => chooseYear(previousYear)
-                            }, "‹"),
-                            h("span", { className: "uak-statsYearLabel" }, uakStatsT("stats.year", { year })),
-                            h("button", {
-                                type: "button",
-                                className: "uak-statsIconButton",
-                                "aria-label": uakStatsT("stats.nextYear"),
-                                disabled: nextYear === undefined,
-                                onClick: () => chooseYear(nextYear)
-                            }, "›")),
-                        h("div", { className: "uak-statsPeriod" },
-                            h("span", { className: "uak-statsMonthLabel" }, range === "month" ? uakStatsT("stats.monthOverview", { month }) : uakStatsT("stats.monthHint")),
-                            uakStatsMonthTrack({
-                                year,
-                                month,
-                                hasData: hasMonthData,
-                                onSelect: (value) => {
-                                    setMonth(value);
-                                    setRange("month");
-                                },
-                                onKeyDown: onMonthKeyDown,
-                                rootProps: {
-                                    ref: monthTrackRef,
-                                    onPointerDown: onMonthPointerDown,
-                                    onPointerMove: onMonthPointerMove,
-                                    onPointerUp: onMonthPointerUp,
-                                    onPointerCancel: onMonthPointerUp
-                                }
-                            })
                         ),
                         h("div", { className: "uak-statsBody" },
                             request.status === "loading" && summary === null
@@ -2975,9 +2971,7 @@ const UAK_SETTINGS_CSS = `
                                                                     range,
                                                                     units,
                                                                     formatNumber: number
-                                                                })
-                                                            ),
-                                                            h("div", { className: "uak-statsLegendRow" },
+                                                                }),
                                                                 uakStatsLegend(heatmap.legends)
                                                             )
                                                         )
