@@ -201,7 +201,9 @@
 
                 // Cell size follows the panel height so the matrix always fits:
                 // shrink the heat cells first, then the gaps; never scroll.
-                const heatCell = Math.max(8, Math.min(18, Math.round((bodyHeight - 190) / 8.4)));
+                // Cell cap matches the reference band (22px); a shorter panel
+                // shrinks cells down to an 8px floor before the gaps tighten.
+                const heatCell = Math.max(8, Math.min(22, Math.floor((bodyHeight - 200) / 8.2)));
                 const heatGap = heatCell >= 12 ? 4 : 3;
 
                 return h("section", {

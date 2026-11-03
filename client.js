@@ -1317,19 +1317,16 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
-/* The sidebar keeps a tint only: putting backdrop-filter here would make it the
-   containing block for the host's position:fixed collapse toggle and push that
-   button out of the top strip. The blur lives on a pseudo layer instead. */
+/* The sidebar keeps a tint only: a backdrop-filter on this element would make
+   it the containing block for the host's position:fixed collapse toggle and
+   push that button out of the top strip. The glass is a script-injected child
+   layer instead (see uakMountSidebarGlass). */
 html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] {
   position: relative;
   background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important;
   border-color: rgb(255 255 255 / .05) !important;
 }
-/* Liquid glass: the pseudo layer carries the blur plus a soft top-light sheen
-   and an inner rim, which reads as a poured surface rather than flat tint. */
-html.uak-liquid [data-slot="sidebar"]::before,
-html.uak-liquid [class*='_sidebarCol']::before {
-  content: "";
+.uak-sidebar-glass {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -1347,11 +1344,9 @@ html.uak-liquid [class*='_sidebarCol']::before {
     radial-gradient(90% 50% at 92% 100%, rgb(90 120 220 / .10), transparent 60%);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / .16),
-    inset 0 -1px 0 rgb(0 0 0 / .22),
-    inset -1px 0 0 rgb(255 255 255 / .05);
+    inset 0 -1px 0 rgb(0 0 0 / .22);
 }
-.uak-no-blur [data-slot="sidebar"]::before,
-.uak-no-blur [class*='_sidebarCol']::before {
+.uak-no-blur .uak-sidebar-glass {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -1516,6 +1511,28 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
                 const wash = document.createElement("div"); wash.className = "uak-liquid-wash"; wash.setAttribute("aria-hidden", "true"); document.body.append(wash);
             }
         }
+        // The host renders the sidebar column with its own class hash; keep one
+        // glass child inside it and drop stale ones. Never put backdrop-filter
+        // on the column itself (see the CSS comment above).
+        function uakMountSidebarGlass() {
+            if (typeof document === "undefined") return;
+            const columns = document.querySelectorAll("[data-slot='sidebar'], [class*='_sidebarCol']");
+            for (const column of columns) {
+                if (!(column instanceof HTMLElement)) continue;
+                if (column.querySelector(":scope > .uak-sidebar-glass")) continue;
+                const glass = document.createElement("div");
+                glass.className = "uak-sidebar-glass";
+                glass.setAttribute("aria-hidden", "true");
+                column.prepend(glass);
+            }
+            for (const glass of document.querySelectorAll(".uak-sidebar-glass")) {
+                if (!(glass instanceof HTMLElement)) continue;
+                if (!glass.parentElement || !glass.parentElement.closest("[data-slot='sidebar'], [class*='_sidebarCol']")) {
+                    glass.remove();
+                }
+            }
+        }
+
         function uakMarkGlassSurfaces(root = document) {
             if (typeof document === "undefined") return;
             const candidates = [];
@@ -1565,6 +1582,7 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             void boot();
             uakApplyAppearance(uakSettingsStore.getState());
             uakMarkGlassSurfaces();
+            uakMountSidebarGlass();
             if (typeof MutationObserver === "function") {
                 observer = new MutationObserver((records) => {
                     const added = records.some((record) => record.addedNodes.length > 0);
@@ -2274,29 +2292,17 @@ const UAK_SETTINGS_CSS = `
     font-size: 13px;
     line-height: 1.5;
 }
-    box-sizing: border-box;
-    width: calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
-    max-width: var(--dsh-composer-card-max-width, 100%);
-    margin: 0 auto 12px;
-    color: var(--dsw-alias-label-primary);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.5;
-}
 .uak-stats *, .uak-stats *::before, .uak-stats *::after { box-sizing: border-box; }
 .uak-stats button { font: inherit; }
+/* Frosted card: the whole statistics surface is one glass panel. */
 .uak-statsFrame {
-    padding: 10px 18px 10px;
-    border: 1px solid var(--dsw-alias-border-l2);
+    padding: 12px 18px;
+    border: 1px solid rgb(120 160 230 / .16);
     border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-}
-    border-color: rgb(147 197 253 / 48%);
-    background: linear-gradient(135deg,
-        rgb(219 234 254 / var(--uak-card-alpha, .58)),
-        rgb(147 197 253 / var(--uak-card-alpha, .58)));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
+    background: rgb(18 22 30 / var(--uak-bg-alpha, .6)) !important;
+    backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.25) !important;
+    -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.25) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 10px 32px rgb(0 0 0 / .22);
 }
 .uak-statsTopline { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: nowrap; }
 .uak-statsTabs { display: flex; align-items: center; gap: 20px; flex: none; min-width: 0; }
@@ -2357,38 +2363,36 @@ const UAK_SETTINGS_CSS = `
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     border-top: 1px solid var(--dsw-alias-border-l2);
     border-bottom: 1px solid var(--dsw-alias-border-l2);
+    flex: none;
 }
-.uak-statsMetric { min-width: 0; padding: clamp(6px, 1.5vh, 12px) 10px clamp(6px, 1.4vh, 11px) 0; }
+.uak-statsMetric { min-width: 0; padding: clamp(6px, 1.4vh, 11px) 10px clamp(6px, 1.3vh, 10px) 0; }
 .uak-statsMetric:nth-child(3n+2) { padding-left: 14px; }
 .uak-statsMetric:nth-child(3n) { padding-left: 14px; }
 .uak-statsMetric:nth-child(n+4) { border-top: 1px solid var(--dsw-alias-border-l2); }
-.uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: clamp(10px, 1.4vh, 12px); line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: clamp(14px, 2.2vh, 20px); line-height: 1.35; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uak-statsContent { display: flex; flex-direction: column; flex: 1 1 auto; gap: 8px; margin-top: clamp(6px, 1.4vh, 12px); overflow: hidden; min-height: 0; }
+.uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: clamp(10px, 1.3vh, 12px); line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: clamp(14px, 2vh, 20px); line-height: 1.35; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uak-statsContent { display: flex; flex-direction: column; flex: 1 1 auto; gap: 8px; margin-top: clamp(6px, 1.2vh, 12px); overflow: hidden; min-height: 0; }
 .uak-statsSectionTitle { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
+/* Heat band: week columns, height set by the cell size so it never collapses. */
 .uak-statsHeatScroll {
-    display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px);
-    flex: 1 1 auto; min-height: 0; overflow-x: auto; overflow-y: hidden;
-    padding: var(--uak-heat-pad, 8px); border-radius: 10px;
-    background: color-mix(in srgb, var(--dsw-alias-bg-module-platform) 20%, transparent);
-    justify-content: space-between; overscroll-behavior-x: contain;
-    scrollbar-width: none; width: 100%; max-width: 100%; box-sizing: border-box;
-}
-.uak-statsHeatScroll::-webkit-scrollbar { display: none; }
-    display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px);
+    display: flex; align-items: flex-start; gap: var(--uak-heat-gap, 4px);
     flex: 0 0 auto; overflow-x: auto; overflow-y: hidden;
     padding: var(--uak-heat-pad, 8px); border-radius: 10px;
     background: color-mix(in srgb, var(--dsw-alias-bg-module-platform) 20%, transparent);
     justify-content: space-between; overscroll-behavior-x: contain;
-    scrollbar-width: none; width: 100%; max-width: 100%; box-sizing: border-box;
+    scrollbar-width: none; width: 100%; max-width: 100%;
 }
 .uak-statsHeatScroll::-webkit-scrollbar { display: none; }
+.uak-statsHeatGrid { display: flex; align-items: stretch; gap: var(--uak-heat-gap, 4px); width: 100%; height: 100%; }
+.uak-statsHeatWeek {
+    display: flex; flex-direction: column; gap: var(--uak-heat-gap, 4px);
+    flex: 1 0 0; max-width: var(--uak-heat-cell, 22px); min-width: 0;
+    height: calc(var(--uak-heat-cell, 22px) * 7 + var(--uak-heat-gap, 4px) * 6);
+}
 .uak-statsWeekday { display: none; }
 .uak-statsDay {
-    display: block; width: 100%; flex: 1 1 0; min-height: 0; aspect-ratio: 1; border-radius: 2px;
-    background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-    display: block; width: 100%; aspect-ratio: 1; border-radius: 2px;
+    display: block; width: 100%; height: var(--uak-heat-cell, 22px); flex: none;
+    border-radius: 2px;
     background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
 }
 .uak-statsDay[data-level="1"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 12%, transparent); }
@@ -2396,21 +2400,21 @@ const UAK_SETTINGS_CSS = `
 .uak-statsDay[data-level="3"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 32%, transparent); }
 .uak-statsDay[data-level="4"] { background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 42%, transparent); }
 .uak-statsDay[data-level="5"] { background: var(--dsw-alias-state-business-primary); }
+.uak-statsDay[data-today="true"] { box-shadow: inset 0 0 0 1.5px var(--dsw-alias-label-primary); }
 .uak-statsLegend { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 10px; margin-left: auto; flex: none; }
 .uak-statsLegendScale { display: inline-flex; align-items: center; gap: 3px; }
 .uak-statsLegendEdge { white-space: nowrap; }
 .uak-statsLegendSwatch { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 3px; }
 .uak-statsBook {
     position: static; overflow: visible; padding: 0; border: 0;
-    background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: none; box-shadow: none;
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px;
-    color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 19px;
+    color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px;
 }
-.uak-statsBook::after { display: none; }
-.uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio { display: none; }
-.uak-statsBookTitle { display: none; }
+.uak-statsBookEyebrow, .uak-statsBookEnglish, .uak-statsBookRatio, .uak-statsBookTitle { display: none; }
 .uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
 .uak-statsBookAmount { color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 600; }
+.uak-statsFooter { display: flex; align-items: center; gap: 16px; flex: none; min-width: 0; flex-wrap: wrap; margin-top: 0; }
 .uak-statsModels { margin-top: 0; }
 .uak-statsModelTable { overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; }
 .uak-statsModelRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) minmax(70px, auto); gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--dsw-alias-border-l2); }
@@ -2424,16 +2428,8 @@ const UAK_SETTINGS_CSS = `
 .uak-statsError { color: var(--dsw-alias-label-error, var(--dsw-alias-state-danger-primary)); }
 .uak-statsRetry { margin-left: 8px; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
 .uak-statsEmptyHint { display: block; margin-top: 4px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
-.uak-statsFooter { display: flex; align-items: center; gap: 16px; flex: none; min-width: 0; flex-wrap: wrap; margin-top: 0; }
-.uak-statsDay[data-today="true"] { box-shadow: inset 0 0 0 1.5px var(--dsw-alias-label-primary); }
 @media (max-width: 720px) {
-.uak-statsFrame {
-    padding: 10px 18px 10px;
-    border: 1px solid var(--dsw-alias-border-l2);
-    border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-}
+    .uak-statsFrame { padding: 10px 12px; }
     .uak-statsTopline { align-items: flex-start; flex-wrap: wrap; }
     .uak-statsTabs { gap: 14px; }
     .uak-statsPeriod { flex-wrap: wrap; }
@@ -2441,127 +2437,9 @@ const UAK_SETTINGS_CSS = `
     .uak-statsMetric:nth-child(n) { padding-left: 0; }
     .uak-statsMetric:nth-child(even) { padding-left: 14px; }
     .uak-statsMetric:nth-child(n+3) { border-top: 1px solid var(--dsw-alias-border-l2); }
-.uak-statsFooter { display: flex; align-items: center; gap: 16px; flex: none; min-width: 0; flex-wrap: wrap; margin-top: 0; }
+    .uak-statsFooter { align-items: flex-start; }
     .uak-statsLegend { justify-content: flex-start; margin-left: 0; }
-}
-
-/* Blue-white visual language, applied on top of the native layout. */
-.uak-stats {
-    box-sizing: border-box;
-    width: calc(100% - 2 * var(--dsh-composer-side-clearance, 0px));
-    max-width: var(--dsh-composer-card-max-width, 100%);
-    margin: 0 auto 8px;
-    color: var(--dsw-alias-label-primary);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.5;
-}
-.uak-statsFrame {
-    padding: 10px 18px 10px;
-    border: 1px solid var(--dsw-alias-border-l2);
-    border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-}
-    padding: 12px 20px 12px;
-    border: 1px solid var(--dsw-alias-border-l2);
-    border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-    border-color: rgb(147 197 253 / 48%);
-    background: linear-gradient(135deg,
-        rgb(219 234 254 / var(--uak-card-alpha, .58)),
-        rgb(147 197 253 / var(--uak-card-alpha, .58)));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 8px 30px rgb(30 64 175 / 10%);
-}
-.uak-statsTab { color: #64748b; }
-.uak-statsTab[aria-selected="true"] { color: #172554; border-bottom-color: #2563eb; }
-.uak-statsRange { color: #64748b; }
-.uak-statsRange[aria-pressed="true"] { background: rgb(147 197 253 / 42%); color: #172554; }
-.uak-statsRange:hover { color: #1e40af; }
-.uak-statsYearLabel, .uak-statsMonthLabel { color: #64748b; }
-.uak-statsIconButton { color: #64748b; }
-.uak-statsIconButton:hover:not(:disabled) { background: rgb(239 246 255); color: #2563eb; }
-.uak-statsMonths::before { background: #dbe3ef; }
-.uak-statsMonth {
-    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    min-width: 0; padding: 2px 0; border: 0; background: transparent;
-    color: var(--dsw-alias-label-tertiary); font-size: 9px; cursor: pointer;
-}
-.uak-statsMonthDot { border-color: rgb(219 234 254); background: #cbd5e1; }
-.uak-statsMonth[data-has-data="true"] .uak-statsMonthDot { background: #60a5fa; }
-.uak-statsMonth[aria-pressed="true"] { color: #1d4ed8; }
-.uak-statsMonth[aria-pressed="true"] .uak-statsMonthDot { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
-.uak-statsMetrics { border-color: #e2e8f0; }
-.uak-statsMetric:nth-child(n+4) { border-top-color: #e2e8f0; }
-.uak-statsMetricLabel { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: clamp(10px, 1.4vh, 12px); line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
-.uak-statsMetricValue { margin-top: 2px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: clamp(14px, 2.2vh, 20px); line-height: 1.35; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.uak-statsSectionTitle, .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus { color: #94a3b8; }
-.uak-statsDay {
-    display: block; width: 100%; flex: 1 1 0; min-height: 0; aspect-ratio: 1; border-radius: 2px;
-    background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-    display: block; width: 100%; aspect-ratio: 1; border-radius: 2px;
-    background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-.uak-statsDay[data-level="1"] { background: #dbeafe; }
-.uak-statsDay[data-level="2"] { background: #93c5fd; }
-.uak-statsDay[data-level="3"] { background: #60a5fa; }
-.uak-statsDay[data-level="4"] { background: #2563eb; }
-.uak-statsDay[data-level="5"] { background: #1e3a8a; }
-.uak-statsBook { color: #64748b; }
-.uak-statsBookTitle { display: none; }
-.uak-statsBookDescription { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
-.uak-statsBookAmount { color: #1e3a8a; }
-.uak-statsModelTable { border-color: #e2e8f0; }
-.uak-statsModelRow, .uak-statsModel { border-color: #e2e8f0; }
-.uak-statsModelRowHead { background: rgb(191 219 254 / 32%); color: #1e3a8a; }
-.uak-statsModelId { color: #172554; }
-.uak-statsModelValue { color: #64748b; }
-.uak-statsRetry { border-color: #93c5fd; color: #1e40af; }
-@media (prefers-color-scheme: dark) {
-    .uak-stats, .uak-statsYearLabel, .uak-statsMonthLabel, .uak-statsIconButton,
-    .uak-statsMonth, .uak-statsMetricValue, .uak-statsBookTitle, .uak-statsModelId { color: #dbeafe; }
-.uak-statsFrame {
-    padding: 10px 18px 10px;
-    border: 1px solid var(--dsw-alias-border-l2);
-    border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-}
-    padding: 12px 20px 12px;
-    border: 1px solid var(--dsw-alias-border-l2);
-    border-radius: 18px;
-    background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 28px rgb(0 0 0 / 4%);
-        border-color: rgb(96 165 250 / 38%);
-        background: linear-gradient(135deg, rgb(30 64 175 / 44%), rgb(15 23 42 / 72%));
-        box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%), 0 8px 30px rgb(0 0 0 / 22%);
-    }
-    .uak-statsTab, .uak-statsRange, .uak-statsMetricLabel, .uak-statsSectionTitle,
-    .uak-statsWeekday, .uak-statsLegend, .uak-statsLegendEdge, .uak-statsStatus, .uak-statsBook,
-    .uak-statsBookDescription, .uak-statsModelValue { color: #bfdbfe; }
-    .uak-statsTab[aria-selected="true"], .uak-statsRange[aria-pressed="true"],
-    .uak-statsMonth[aria-pressed="true"], .uak-statsBookAmount { color: #eff6ff; }
-    .uak-statsRange[aria-pressed="true"] { background: rgb(37 99 235 / 38%); }
-    .uak-statsMonthDot { border-color: rgb(30 64 175 / 55%); }
-    .uak-statsMetrics, .uak-statsMetric:nth-child(n+4),
-    .uak-statsModelTable, .uak-statsModelRow, .uak-statsModel { border-color: rgb(147 197 253 / 22%); }
-    .uak-statsModelRowHead { background: rgb(30 64 175 / 36%); color: #bfdbfe; }
-.uak-statsDay {
-    display: block; width: 100%; flex: 1 1 0; min-height: 0; aspect-ratio: 1; border-radius: 2px;
-    background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-    display: block; width: 100%; aspect-ratio: 1; border-radius: 2px;
-    background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 12%, transparent);
-}
-    .uak-statsDay[data-level="1"] { background: rgb(96 165 250 / 22%); }
-    .uak-statsDay[data-level="2"] { background: rgb(96 165 250 / 40%); }
-    .uak-statsDay[data-level="3"] { background: rgb(96 165 250 / 62%); }
-    .uak-statsDay[data-level="4"] { background: rgb(59 130 246 / 82%); }
-    .uak-statsDay[data-level="5"] { background: #93c5fd; }
-}
-`;
+}`;
 
         function uakStatsStatus(message, options) {
             const source = options !== null && typeof options === "object" ? options : {};
@@ -2978,7 +2856,9 @@ const UAK_SETTINGS_CSS = `
 
                 // Cell size follows the panel height so the matrix always fits:
                 // shrink the heat cells first, then the gaps; never scroll.
-                const heatCell = Math.max(8, Math.min(18, Math.round((bodyHeight - 190) / 8.4)));
+                // Cell cap matches the reference band (22px); a shorter panel
+                // shrinks cells down to an 8px floor before the gaps tighten.
+                const heatCell = Math.max(8, Math.min(22, Math.floor((bodyHeight - 200) / 8.2)));
                 const heatGap = heatCell >= 12 ? 4 : 3;
 
                 return h("section", {
