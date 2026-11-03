@@ -1510,9 +1510,9 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             const text = String(element.textContent || "").replace(/\s+/g, " ").trim();
             const title = element.querySelector('[role="heading"],h1,h2,h3');
             const label = `${element.getAttribute("aria-label") || ""} ${title?.textContent || ""} ${text.slice(0, 120)}`;
-            // The real host dialog is titled "下载日志"/"Download session log";
-            // do not require the exact phrase "session log" and a second verb.
-            return /(session\s*log|会话日志|session日志|下载日志)/i.test(label);
+            // The actual notification shown by Session export is
+            // "Session 导出已开始下载" / "Session export started".
+            return /(session\s*log|会话日志|session日志|下载日志|session\s*导出已开始下载|session\s*export\s*(started|download))/i.test(label);
         }
         function uakMountSessionLogDismissal() {
             if (typeof document === "undefined") return () => {};
