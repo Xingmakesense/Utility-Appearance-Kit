@@ -6,6 +6,32 @@ html.uak-liquid body #root, html.uak-liquid body #app { background: transparent 
 #uak-skin-media { position: absolute; inset: 0; width: 100%; height: 100%; background-position: center; }
 #uak-skin-blur { position: absolute; inset: 0; pointer-events: none; }
 .uak-liquid-wash { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(circle at 15% 20%, rgb(96 165 250 / .15), transparent 40%), radial-gradient(circle at 85% 80%, rgb(168 85 247 / .12), transparent 45%); mix-blend-mode: overlay; }
+/* Chat column: its background is only --dsw-alias-bg-base, which the skin
+   turns transparent, so message text used to sit directly on the wallpaper.
+   Give the column its own glass backing (tint, no blur over the text itself). */
+html.uak-liquid [class*='_centerCol'] {
+  background-color: rgb(18 23 33 / var(--uak-bg-alpha, .6)) !important;
+  backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
+}
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_centerCol'] {
+  background-color: rgb(250 251 253 / var(--uak-bg-alpha, .6)) !important;
+}
+/* Right bar and bottom rows share the same bare-background problem. */
+html.uak-liquid [class*='_rightbarCol'] {
+  background-color: rgb(18 23 33 / var(--uak-bg-alpha, .6)) !important;
+  backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.05) !important;
+}
+html.uak-liquid body:not([data-ds-dark-theme]) [class*='_rightbarCol'] {
+  background-color: rgb(250 251 253 / var(--uak-bg-alpha, .6)) !important;
+}
+/* Settings/market panels are portalled and previously only got token
+   transparency; back them with the same glass so their labels read. */
+html.uak-liquid [role="dialog"] {
+  backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
+  -webkit-backdrop-filter: blur(var(--uak-pop-blur,0px)) !important;
+}
 html.uak-liquid [data-slot="sidebar"] { background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.2) !important; border-color: rgb(255 255 255 / .05) !important; }
 /* L2 composer material is fixed; there is no input image configuration. */
 html.uak-liquid [data-composer-card], html.uak-liquid [data-uak-glass-card] { background-color: rgb(30 41 59 / var(--uak-input-alpha, .7)) !important; backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; -webkit-backdrop-filter: blur(var(--uak-glass-blur,18px)) saturate(1.15) !important; border: 1px solid rgb(255 255 255 / .08) !important; box-shadow: 0 8px 32px rgb(0 0 0 / .15) !important; }
