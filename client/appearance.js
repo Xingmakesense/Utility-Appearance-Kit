@@ -14,6 +14,8 @@ html.uak-liquid [data-slot="sidebar"], html.uak-liquid [class*='_sidebarCol'] {
   background-color: rgb(20 25 35 / var(--uak-bg-alpha, .6)) !important;
   border-color: rgb(255 255 255 / .05) !important;
 }
+/* Liquid glass: the pseudo layer carries the blur plus a soft top-light sheen
+   and an inner rim, which reads as a poured surface rather than flat tint. */
 html.uak-liquid [data-slot="sidebar"]::before,
 html.uak-liquid [class*='_sidebarCol']::before {
   content: "";
@@ -21,8 +23,21 @@ html.uak-liquid [class*='_sidebarCol']::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2);
-  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.2);
+  border-radius: inherit;
+  backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.35) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--uak-glass-blur, 18px)) saturate(1.35) brightness(1.04);
+  background:
+    linear-gradient(180deg,
+      rgb(255 255 255 / .10) 0%,
+      rgb(255 255 255 / .03) 18%,
+      rgb(255 255 255 / 0) 42%,
+      rgb(0 0 0 / .08) 100%),
+    radial-gradient(120% 60% at 12% 0%, rgb(120 170 255 / .16), transparent 62%),
+    radial-gradient(90% 50% at 92% 100%, rgb(90 120 220 / .10), transparent 60%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .16),
+    inset 0 -1px 0 rgb(0 0 0 / .22),
+    inset -1px 0 0 rgb(255 255 255 / .05);
 }
 .uak-no-blur [data-slot="sidebar"]::before,
 .uak-no-blur [class*='_sidebarCol']::before {
