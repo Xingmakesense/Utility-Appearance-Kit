@@ -218,6 +218,17 @@
                 .sort((left, right) => left - right);
         }
 
+        // The FIRST month is scored against the fixed default table. Every later
+        // month is scored against the FIRST month's own data, frozen once, so the
+        // colours keep one yardstick instead of drifting as history grows.
+        function uakFirstMonthTokenHistory(summary, firstMonth) {
+            return uakPerDayEntries(summary)
+                .filter(([date]) => date.startsWith(`${firstMonth}-`))
+                .map(([, day]) => uakFiniteCount(day?.tokens))
+                .filter((tokens) => tokens > 0)
+                .sort((left, right) => left - right);
+        }
+
         function uakHeatThresholds(summary, year, month) {
             const normalizedYear = uakClampYear(year);
             const normalizedMonth = uakClampMonth(month);
@@ -226,7 +237,7 @@
                 ? summary.firstDay.slice(0, 7)
                 : uakPerDayEntries(summary).find(([, day]) => uakFiniteCount(day?.tokens) > 0)?.[0]?.slice(0, 7) ?? prefix;
             if (firstMonth === prefix) return [...uakUsageFirstMonthThresholds];
-            const history = uakPositiveTokenHistory(summary);
+            const history = uakFirstMonthTokenHistory(summary, firstMonth);
             if (history.length === 0) return [...uakUsageFirstMonthThresholds];
             const p60 = Math.max(1, Math.ceil(history[Math.ceil(0.6 * history.length) - 1]));
             const thresholds = [];

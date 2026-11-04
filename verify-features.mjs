@@ -85,9 +85,11 @@ assert.equal(leap.levels.filter((level) => level === null).length, 6);
 const leapYear = uakMonthHeatmap({ firstDay: "2028-02-29", perDay: { "2028-02-29": day(60000) } }, 2028, 2, "short");
 assert.equal(leapYear.levels.filter((level) => level !== null).length, 29, "leap February keeps all 29 dates");
 assert.deepEqual(uakHeatThresholds(summary, 2026, 1), [20000, 100000, 500000, 1000000]);
-assert.deepEqual(uakHeatThresholds(summary, 2026, 3), [50000, 100000, 150000, 200000]);
+// Later months are scored against the FIRST month only: 2026-01 has a single
+// positive day (50000), so its p60 is 50000 and the four bands are 12500..50000.
+assert.deepEqual(uakHeatThresholds(summary, 2026, 3), [12500, 25000, 37500, 50000]);
 const march = uakMonthHeatmap(summary, 2026, 3, "short");
-assert.equal(march.levels[6], 4, "March 1 uses the fourth adaptive token level");
+assert.equal(march.levels[6], 5, "March 1 clears the first-month-derived top band");
 assert.equal(march.levels.at(-1), 0, "an idle day stays neutral");
 assert.equal(march.legends.length, 6, "neutral days plus five token levels");
 assert.equal(uakSummarizeMonth(summary, 2027, 2).tokens, 0, "empty months stay empty");
@@ -106,13 +108,13 @@ assert.equal(heatCells.at(-1).key, "2026-03-04", "today stays in the bottom-righ
 assert.equal(heatCells.at(-1).props["data-today"], "true");
 assert.equal(heatCells.at(-1).props["data-level"], 0, "a quiet day still draws its cell");
 assert.equal(heatCells.at(-4).key, "2026-03-01");
-assert.equal(heatCells.at(-4).props["data-level"], 4, "the latest activity uses UAK's existing level");
+assert.equal(heatCells.at(-4).props["data-level"], 5, "the latest activity uses the first-month scale");
 // The threshold table follows the SELECTED month, not the month the rolling
 // grid starts in: March uses the p60 table, January uses the first-month table.
 const heatCellOn = (grid, key) => grid.children.flatMap((week) => week.children)
     .find((cell) => cell.key === key);
-assert.equal(heatCellOn(rollingHeat, "2026-03-01").props["data-level"], 4,
-    "a selected later month uses the adaptive split");
+assert.equal(heatCellOn(rollingHeat, "2026-03-01").props["data-level"], 5,
+    "a selected later month uses the first-month-derived split");
 const januaryHeat = uakStatsHeatmap({
     year: 2026, month: 1, summary, today: new Date(2026, 2, 4, 12)
 });
