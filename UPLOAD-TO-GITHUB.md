@@ -40,11 +40,11 @@ node scripts/build-client.mjs
 pnpm pack --pack-destination dist
 ```
 
-将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.5.5`，建议标签 `v2.5.5`：
+将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.5.9`，建议标签 `v2.5.9`：
 
 ```bash
-git tag -a v2.5.5 -m "2.5.5"
-git push origin v2.5.5
+git tag -a v2.5.9 -m "2.5.9"
+git push origin v2.5.9
 ```
 
 ## 必须排除
@@ -54,4 +54,4 @@ git push origin v2.5.5
 - `.env`、密钥、token、Cookie、OAuth 凭据文件
 - 本机绝对路径、个人 profile 数据和真实账户响应
 
-`.gitignore` 已覆盖常见产物。上传前仍应执行敏感词检查，并确认 `subscriptions.json`（如果本项目包含）与 `host/subscriptions/`（如果本项目包含）已提交。
+`.gitignore` 已覆盖常见产物。上传前仍应执行敏感词检查，确认只提交本项目的源码、公开文档、测试和配置文件。

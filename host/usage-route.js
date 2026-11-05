@@ -4,8 +4,14 @@ export const USAGE_PATH = "/utility-appearance-kit/usage";
 export const MARKER_HEADER = "x-dsh-uak-usage";
 export const MARKER_VALUE = "1";
 
+const usageResponseCache = new WeakMap();
+
 function sendJson(response, status, body) {
-  const text = JSON.stringify(body);
+  let text = body !== null && typeof body === "object" ? usageResponseCache.get(body) : undefined;
+  if (text === undefined) {
+    text = JSON.stringify(body);
+    if (body !== null && typeof body === "object") usageResponseCache.set(body, text);
+  }
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(text),
@@ -166,7 +172,7 @@ export function installUsageStats(ctx, options = {}) {
           timer = setTimeout(() => {
             timer = null;
             if (!disposed) void aggregateUsage({ background: true }).catch(() => {});
-          }, 0);
+          }, 60);
           if (typeof timer.unref === "function") timer.unref();
         }
         dispose = () => {

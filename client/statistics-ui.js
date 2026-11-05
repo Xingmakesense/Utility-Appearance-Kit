@@ -137,7 +137,9 @@
                     const cached = uakUsageCache;
                     if (reloadKey === 0 && cached !== null && Date.now() - cached.time < uakUsageCacheTTL) {
                         setRequest({ status: "ready", summary: cached.summary, error: null });
-                        return undefined;
+                        // A Host snapshot is immediately useful, but its stale
+                        // marker still requires one background freshness read.
+                        if (cached.summary?.stale !== true) return undefined;
                     }
                     abortRef.current?.abort();
                     const controller = new AbortController();
@@ -160,6 +162,7 @@
                 }, []);
 
                 const summary = request.summary;
+                const monthIndex = react.useMemo(() => uakUsageMonthIndex(summary), [summary]);
                 const years = react.useMemo(() => uakAvailableYears(summary), [summary]);
                 const previousYear = [...years].reverse().find((value) => value < year);
                 const nextYear = years.find((value) => value > year);
@@ -184,20 +187,15 @@
 
                 // One predicate feeds the month track dots and the "no data"
                 // state, so both always agree on the selected year.
-                const hasMonthData = (value) => summary?.perDay !== null && typeof summary?.perDay === "object"
-                    && Object.keys(summary.perDay).some((date) => date.startsWith(
-                        `${year}-${String(value).padStart(2, "0")}-`
-                    ));
+                const hasMonthData = (value) => monthIndex.get(year)?.has(value) === true;
                 const monthHasData = hasMonthData(month);
 
                 const chooseYear = (next) => {
                     if (!years.includes(next)) return;
                     setYear(next);
                     setRange("month");
-                    if (!hasMonthData(month) && next !== today.getFullYear()) {
-                        const months = Object.keys(summary.perDay)
-                            .filter((date) => date.startsWith(`${next}-`))
-                            .map((date) => Number(date.slice(5, 7)));
+                    if (!(monthIndex.get(next)?.has(month) === true) && next !== today.getFullYear()) {
+                        const months = [...(monthIndex.get(next) ?? [])].sort((left, right) => left - right);
                         if (months.length > 0) setMonth(months[0]);
                     }
                 };
