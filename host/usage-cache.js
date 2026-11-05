@@ -158,7 +158,12 @@ export function loadParseCache(file, lifetime = new Map()) {
     const persisted = entry.stats === null || entry.stats === undefined
       ? null : sanitizeStats(expandStats(entry.stats));
     const lifetimeStats = lifetime.get(key);
-    const stats = lifetime.get(key) ?? persisted;
+    const stats = lifetimeStats ?? persisted;
+    // Older parse caches may be the only remaining copy of a session whose
+    // ledger row was not written yet. Promote that validated row into the
+    // in-memory lifetime map; otherwise an unchanged file would be skipped and
+    // its historical statistics would disappear from the summary.
+    if (lifetimeStats === undefined && stats !== null) lifetime.set(key, stats);
     files.set(sessionFile, {
       mtimeMs: entry.mtimeMs,
       size: entry.size,

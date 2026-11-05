@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { createUsageStore } from "./host/usage-store.js";
-import { compactStats, expandStats, sanitizeStats } from "./host/usage-cache.js";
+import { compactStats, expandStats, sanitizeStats, loadParseCache } from "./host/usage-cache.js";
 import { loadLedger, saveLedger } from "./host/usage-ledger.js";
 import { refuseRequest } from "./host/usage-route.js";
 
@@ -99,6 +99,17 @@ assert.equal(recovered.get("first").perDay["2026-03-02"].tokens, 2000, "a damage
 rmSync(logs, { recursive: true, force: true });
 const retainedAfterRestart = await reopened.aggregate({ background: true });
 assert.equal(retainedAfterRestart.perDay["2026-03-02"].tokens, 2000, "deleting a log after restart still preserves its lifetime row");
+
+// A legacy parse cache can contain the only copy of a session before its
+// lifetime row was persisted. Loading it must not silently drop that history.
+const legacyLifetime = new Map();
+const legacyCache = path.join(root, "legacy-cache.json");
+writeFileSync(legacyCache, JSON.stringify({ version: 2, files: {
+    [logFile]: { mtimeMs: 1, size: 1, stats: compactStats(recovered.get("first")) }
+} }));
+loadParseCache(legacyCache, legacyLifetime);
+assert.equal(legacyLifetime.get("first").perDay["2026-03-02"].tokens, 2000,
+    "a valid legacy cache row is promoted into lifetime history");
 
 const headers = { host: "127.0.0.1:49223", "x-dsh-uak-usage": "1", "sec-fetch-site": "same-origin" };
 assert.equal(refuseRequest({ headers }, "http://127.0.0.1:49223"), null);

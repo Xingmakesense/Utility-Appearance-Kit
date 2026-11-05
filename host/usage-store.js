@@ -350,7 +350,8 @@ export function createUsageStore({
       }
       const cached = cache.get(file);
       let entry = cached;
-      const unchanged = cached !== undefined && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size;
+      const unchanged = cached !== undefined && cached.stats !== null && cached.stats !== undefined
+        && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size;
       const grown = cached === undefined ? -1 : stat.size - cached.size;
       const hotTail = cached !== undefined && grown >= 0 && grown <= tailBytes && now() - stat.mtimeMs <= graceMs;
       if (!force && hotTail) {
