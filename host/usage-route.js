@@ -4,14 +4,8 @@ export const USAGE_PATH = "/utility-appearance-kit/usage";
 export const MARKER_HEADER = "x-dsh-uak-usage";
 export const MARKER_VALUE = "1";
 
-const usageResponseCache = new WeakMap();
-
 function sendJson(response, status, body) {
-  let text = body !== null && typeof body === "object" ? usageResponseCache.get(body) : undefined;
-  if (text === undefined) {
-    text = JSON.stringify(body);
-    if (body !== null && typeof body === "object") usageResponseCache.set(body, text);
-  }
+  const text = JSON.stringify(body);
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(text),
@@ -59,23 +53,7 @@ function isLoopbackAuthority(authority) {
 /** All cheap trust checks happen before enumeration, parsing or refresh. */
 export function refuseRequest(request, origin) {
   const host = headerOf(request, "host");
-  if (host === undefined) {
-    // The desktop window loads the page from `dsh-app://app` and forwards the
-    // API through the app protocol, which strips `host`, `origin`, and
-    // `sec-fetch-site`. Appearance already accepts that shape; statistics must
-    // do the same or every request fails with `no-host` and the card shows an
-    // error forever. The private marker still fences the endpoint from plain
-    // cross-site requests, and a supplied host/origin is still checked below.
-    const site = headerOf(request, "sec-fetch-site");
-    if (site !== undefined && site !== "same-origin" && site !== "none") return "cross-site";
-    const requestOrigin = headerOf(request, "origin");
-    if (requestOrigin !== undefined && requestOrigin !== "null" && requestOrigin !== "dsh-app://app") {
-      const supplied = authorityOf(requestOrigin, "http:");
-      if (supplied === null || !isLoopbackAuthority(supplied)) return "foreign-origin";
-    }
-    if (headerOf(request, MARKER_HEADER) !== MARKER_VALUE) return "missing-marker";
-    return null;
-  }
+  if (host === undefined) return "no-host";
   const authority = authorityOf(host, "http:");
   if (authority === null) return "bad-host";
 
@@ -188,7 +166,7 @@ export function installUsageStats(ctx, options = {}) {
           timer = setTimeout(() => {
             timer = null;
             if (!disposed) void aggregateUsage({ background: true }).catch(() => {});
-          }, 60);
+          }, 0);
           if (typeof timer.unref === "function") timer.unref();
         }
         dispose = () => {

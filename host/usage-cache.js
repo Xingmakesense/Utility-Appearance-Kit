@@ -4,7 +4,6 @@ import {
   readFileSync,
   renameSync,
   unlinkSync,
-  copyFileSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -21,14 +20,14 @@ const expandHours = (hours) => {
     return result;
 };
 export function compactStats(stats) {
-    if (stats === null || typeof stats !== "object") return null;
+    if (stats === null) return null;
     return {
         hasUserMessage: stats.hasUserMessage,
         firstUserDay: stats.firstUserDay,
-        perDay: Object.fromEntries(Object.entries(stats.perDay || {}).filter(([, day]) => day && (day.tokens > 0 || day.messages > 0)).map(([date, day]) => [date, {
+        perDay: Object.fromEntries(Object.entries(stats.perDay || {}).filter(([, day]) => day.tokens > 0 || day.messages > 0).map(([date, day]) => [date, {
             tokens: day.tokens, messages: day.messages,
-            hours: compactHours(day.hours || []), messageHours: compactHours(day.messageHours || []),
-            models: Object.entries(day.models || {}).filter(([, model]) => model && model.tokens > 0)
+            hours: compactHours(day.hours), messageHours: compactHours(day.messageHours),
+            models: Object.entries(day.models || {}).filter(([, model]) => model.tokens > 0)
                 .map(([id, model]) => [id, model.tokens, model.messages]),
         }])),
     };
@@ -64,10 +63,6 @@ export function parseCacheFile() {
 
 export function ledgerFile() {
   return path.join(dataDirectory(), "ledger.json");
-}
-
-export function ledgerBackupFile() {
-  return `${ledgerFile()}.bak`;
 }
 
 export function hasParseCache(file) {
@@ -138,7 +133,7 @@ export function sanitizeStats(raw) {
   };
 }
 
-export function loadParseCache(file, lifetime = new Map()) {
+export function loadParseCache(file) {
   const files = new Map();
   if (typeof file !== "string" || file === "") return files;
   let parsed;
@@ -150,54 +145,26 @@ export function loadParseCache(file, lifetime = new Map()) {
   if (!plainRecord(parsed) || parsed.version !== CACHE_VERSION || !plainRecord(parsed.files)) return files;
   for (const [sessionFile, entry] of Object.entries(parsed.files)) {
     if (!plainRecord(entry) || !counter(entry.mtimeMs) || !counter(entry.size)) continue;
-    // Version 2 embedded a complete copy of every session in this cache. The
-    // ledger remains authoritative; this read-only migration drops that copy
-    // and joins the cache entry to its lifetime row instead.
-    const directory = path.basename(path.dirname(sessionFile));
-    const key = directory.startsWith("session-") ? directory.slice("session-".length) : directory;
-    const persisted = entry.stats === null || entry.stats === undefined
-      ? null : sanitizeStats(expandStats(entry.stats));
-    const lifetimeStats = lifetime.get(key);
-    const stats = lifetimeStats ?? persisted;
-    // Older parse caches may be the only remaining copy of a session whose
-    // ledger row was not written yet. Promote that validated row into the
-    // in-memory lifetime map; otherwise an unchanged file would be skipped and
-    // its historical statistics would disappear from the summary.
-    if (lifetimeStats === undefined && stats !== null && stats !== undefined) lifetime.set(key, stats);
-    files.set(sessionFile, {
-      mtimeMs: entry.mtimeMs,
-      size: entry.size,
-      stats,
-    });
+    const stats = entry.stats === null ? null : sanitizeStats(expandStats(entry.stats));
+    if (entry.stats !== null && stats === null) continue;
+    files.set(sessionFile, { mtimeMs: entry.mtimeMs, size: entry.size, stats });
   }
   return files;
 }
 
 /** Atomic best-effort persistence. A failed save never escapes into the UI. */
-export function atomicSave(file, payload, { backup = false } = {}) {
+export function atomicSave(file, payload) {
   if (typeof file !== "string" || file === "") return false;
   let text;
   try {
     text = JSON.stringify(payload);
-    if (backup) JSON.parse(text);
   } catch {
     return false;
   }
   const temporary = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
-  const backupFile = `${file}.bak`;
-  let previous;
   try {
     mkdirSync(path.dirname(file), { recursive: true });
-    if (backup) {
-      try {
-        previous = readFileSync(file, "utf8");
-        JSON.parse(previous);
-      } catch {
-        previous = undefined;
-      }
-    }
     writeFileSync(temporary, text, "utf8");
-    if (backup && previous !== undefined) copyFileSync(file, backupFile);
     renameSync(temporary, file);
     return true;
   } catch {
@@ -217,6 +184,7 @@ export function saveParseCache(file, cache) {
     payload.files[sessionFile] = {
       mtimeMs: entry.mtimeMs,
       size: entry.size,
+      stats: compactStats(entry.stats),
     };
   }
   return atomicSave(file, payload);

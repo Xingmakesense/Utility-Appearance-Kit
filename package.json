@@ -1,6 +1,6 @@
 {
   "name": "utility-appearance-kit",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示、图片壁纸、液态/磨砂玻璃与月度书卷统计。 · Reasoning controls, image wallpaper, layered glass, and monthly usage statistics.",
   "type": "module",
   "main": "host.js",

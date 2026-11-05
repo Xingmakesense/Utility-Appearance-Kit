@@ -1,6 +1,6 @@
 # Utility-Appearance-Kit
 
-> 版本 `2.6.1` · 需要 DSH `>= 0.2.1-rc.2`
+> 版本 `2.6.2` · 需要 DSH `>= 0.2.1-rc.2`
 
 **在 DeepSeek Harness 输入区直接拖动推理强度，并查看 DeepSeek 峰谷状态。** 滑条紧贴官方模型选择器左侧，按模型的真实档位数伸缩；订阅卡片与认证已拆分为独立的 `dsh-Subscription-Management`。
 
@@ -123,11 +123,11 @@ pnpm pack --pack-destination dist
 - 空白会话页显示与输入框同宽的月度统计卡。默认当前年月，可切换年份和1–12月；六项指标、月度模型、书籍折算均按所选月份的真实数据计算。
 - 统计卡保留原生卡片布局，使用蓝白配色：浅蓝渐变面板、蓝色边框与强调、蓝色五档热力。深色系统下切换为深蓝可读配色；日期格始终为正方形，不随宽度拉伸。
 - 图片服务只注册设置、上传和图片读取路径，不再占用 `/utility-appearance-kit` 通配前缀，订阅管理插件的认证通道不会被拦截。
-- 热力日期格保持正方形，按每日 Token 显示五档蓝色。历史最早 Token 记录所在月使用固定阈值；之后以**首月全部正消耗日**的第60百分位为上限，前四档均分，第五档为高于该上限。零消耗日为中性色，不占五档。
+- 热力日期格保持正方形，按每日 Token 显示五档蓝色。历史最早 Token 记录所在月使用固定阈值；之后以全部正消耗历史日的第60百分位为上限，前四档均分，第五档为高于该上限。零消耗日为中性色，不占五档。
 - 书籍对比始终开启，支持随机或固定书目；篇幅分为“短章”（不足5万字）、“中构”（5万至不足30万字）、“鸿篇”（30万字及以上），不同版本字数以约数表示。
 - DSH 下载 Session 日志的弹窗正常展示2秒后仅触发关闭，不自动下载、上传或删除日志；此保护始终启用，无设置开关。
 
-月度聚合只读 DSH 会话日志，解析进度和累计账本独立保存到 `<DSH_HOME>/utility-appearance-kit/cache/`，不读取或复用原统计插件的账本。开屏优先展示已保存的完整历史，后台继续检查并汇总最新日志；删除会话日志不会删除账本，也不会恢复旧会话。账本采用原子写入并保留最近一次有效备份，主文件损坏时可回退。删除账本及备份将丢失已从磁盘删除的会话所对应的历史计数；重装 DSH 时请保留原 `DSH_HOME`。统计接口需要同源自定义请求头，壁纸路由仅接受受支持的图片类型。
+月度聚合只读 DSH 会话日志，解析缓存和累计账本独立保存到 `<DSH_HOME>/utility-appearance-kit/cache/`，不读取或复用原统计插件的账本。删除账本将丢失已从磁盘删除的会话所对应的历史计数。统计接口需要同源自定义请求头，壁纸路由仅接受受支持的图片类型。
 
 The statistics card, book catalog, native settings page and save feedback follow the DSH interface language (Simplified Chinese or English). English uses the book titles, `Short / Medium / Epic`, and short number units where automatic units are selected.
 
