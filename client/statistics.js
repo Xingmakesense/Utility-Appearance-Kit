@@ -10,26 +10,6 @@
         ]);
 
         const uakUsageNeutralColor = "var(--dsw-alias-fill-secondary, #e8edf3)";
-        const uakUsageMonthIndexes = new WeakMap();
-
-        // The Host response is immutable from the panel's point of view. Index
-        // its month keys once instead of scanning every historical day for each
-        // of the twelve month dots on every render.
-        function uakUsageMonthIndex(summary) {
-            if (summary === null || typeof summary !== "object") return new Map();
-            const cached = uakUsageMonthIndexes.get(summary);
-            if (cached !== undefined) return cached;
-            const index = new Map();
-            for (const date of Object.keys(summary.perDay ?? {})) {
-                if (!uakIsDayKey(date)) continue;
-                const year = Number(date.slice(0, 4));
-                const month = Number(date.slice(5, 7));
-                if (!index.has(year)) index.set(year, new Set());
-                index.get(year).add(month);
-            }
-            uakUsageMonthIndexes.set(summary, index);
-            return index;
-        }
         const uakUsageHeatColors = Object.freeze([
             uakUsageNeutralColor,
             "#dbeafe",
@@ -102,7 +82,7 @@
                 || summary.perDay === null || typeof summary.perDay !== "object") return [];
             return Object.entries(summary.perDay)
                 .filter(([date]) => uakIsDayKey(date))
-                .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+                .sort(([left], [right]) => left.localeCompare(right));
         }
 
         function uakMergeUsage(target, source) {
@@ -164,17 +144,18 @@
             const normalizedMonth = uakClampMonth(month);
             const prefix = `${normalizedYear}-${String(normalizedMonth).padStart(2, "0")}-`;
             const usage = uakNewUsage();
+            const sessions = new Set();
             const perDay = {};
-            let sessions = 0;
             for (const [date, raw] of uakPerDayEntries(summary)) {
                 if (!date.startsWith(prefix)) continue;
                 const day = uakNormalizeDay(raw);
                 perDay[date] = day;
                 uakMergeUsage(usage, day);
-                sessions += uakFiniteCount(summary.sessionsByDay?.[date]);
+                const count = uakFiniteCount(summary.sessionsByDay?.[date]);
+                for (let index = 0; index < count; index += 1) sessions.add(`${date}:${index}`);
             }
             const finalized = uakFinalizeUsage(usage);
-            const days = Object.entries(perDay).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+            const days = Object.entries(perDay).sort(([left], [right]) => left.localeCompare(right));
             const activeDays = days.filter(([, day]) => day.tokens > 0 || day.messages > 0).length;
             const peakEntry = days.reduce((peak, entry) => peak === null || entry[1].tokens > peak[1].tokens
                 ? entry : peak, null);
@@ -189,14 +170,14 @@
                 month: normalizedMonth,
                 tokens: finalized.tokens,
                 messages: finalized.messages,
-                sessions: sessions,
+                sessions: sessions.size,
                 activeDays,
                 activeHours,
                 peakHour,
                 favoriteModel,
                 peakDay: peakEntry === null ? null : peakEntry[0],
                 peakDayTokens: peakEntry === null ? 0 : peakEntry[1].tokens,
-                metrics: uakUsageMetrics(finalized, sessions, activeDays, finalized.messageHours),
+                metrics: uakUsageMetrics(finalized, sessions.size, activeDays, finalized.messageHours),
                 models: finalized.models,
                 perDay
             };
