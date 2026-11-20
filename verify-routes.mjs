@@ -77,6 +77,23 @@ assert.equal(response.status, 403, "cross-site requests are rejected");
 response = respond();
 await settingsRoute.handler({ method: "POST", url: "/utility-appearance-kit/settings", headers: { host: "127.0.0.1:49223", "sec-fetch-site": "same-origin" } }, response);
 assert.equal(response.status, 403, "writes still require the private request marker");
+// Settings reads must come from the file every time. The old host cached the
+// parsed object for the process lifetime, so a second window (or an external
+// edit) never saw a newer value.
+{
+    const settingsPath = join(home, "utility-appearance-kit", "settings.json");
+    mkdirSync(join(home, "utility-appearance-kit"), { recursive: true });
+    writeFileSync(settingsPath, JSON.stringify({ opacity: 11 }), "utf8");
+    response = respond();
+    await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: trusted }, response);
+    assert.equal(response.status, 200);
+    assert.equal(JSON.parse(response.body).value.opacity, 11, "the settings GET reads the current file");
+    writeFileSync(settingsPath, JSON.stringify({ opacity: 22 }), "utf8");
+    response = respond();
+    await settingsRoute.handler({ method: "GET", url: "/utility-appearance-kit/settings", headers: trusted }, response);
+    assert.equal(JSON.parse(response.body).value.opacity, 22, "a later settings edit must be visible without a restart");
+}
+
 const assetRoute = routes.find((route) => route.path === "/utility-appearance-kit/asset" && route.kind === "prefix");
 mkdirSync(join(home, "utility-appearance-kit", "assets"), { recursive: true });
 writeFileSync(join(home, "utility-appearance-kit", "assets", "wallpaper.jpg"), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));

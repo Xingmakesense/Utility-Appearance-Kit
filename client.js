@@ -25,22 +25,25 @@ const module = { exports: {} };
         //#endregion
 
         //#region client/options.js
-const DEFAULT_OPTIONS = Object.freeze({ declarations: "auto", slider: true });
+const DEFAULT_OPTIONS = Object.freeze({ slider: true });
 
+        /**
+         * Normalize the browser half's config. The removed `declarations`
+         * switch is dropped for compatibility with profiles that still carry
+         * it; `slider` is the only remaining option.
+         */
         function normalizeOptions(config) {
             if (config === undefined || config === null) return { value: { ...DEFAULT_OPTIONS } };
             if (typeof config !== "object" || Array.isArray(config)) {
                 return { issues: [{ message: "plugin config must be an object" }] };
             }
-            const declarations = config.declarations ?? "auto";
             const slider = config.slider ?? true;
             const issues = [];
-            if (declarations !== "auto" && declarations !== "off") {
-                issues.push({ message: 'declarations must be "auto" or "off"' });
-            }
             if (typeof slider !== "boolean") issues.push({ message: "slider must be a boolean" });
             if (issues.length > 0) return { issues };
-            return { value: { ...config, declarations, slider } };
+            const value = { ...config, slider };
+            delete value.declarations;
+            return { value };
         }
         //#endregion
 
@@ -1195,12 +1198,16 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
         }
         const UAK_SETTINGS_PATH = "/utility-appearance-kit/settings";
         const UAK_USAGE_PATH = "/utility-appearance-kit/usage";
+        // The statistics card (and the heat band inside it) has one fixed
+        // height. It used to be a 300-560 px slider; the default 360 px is now
+        // the only value, so every host renders the same budget.
+        const UAK_STATS_HEIGHT = 360;
         const UAK_DEFAULTS = Object.freeze({
             imageUrl: "", imageMode: "cover", opacity: 0,
             brightness: 100,
             glassOpacity: 70, glassBlur: 18,
             popBg: Object.freeze({ alpha: 40, blur: 10 }),
-            bodyHeight: 360, bookMode: "random", bookTitle: "活着", units: "auto"
+            bookMode: "random", bookTitle: "活着", units: "auto"
         });
         const uakClamp = (value, min, max, fallback) => {
             const number = Number(value);
@@ -1221,7 +1228,6 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                     alpha: uakClamp(pop.alpha, 0, 100, 40),
                     blur: uakClamp(pop.blur, 0, 40, 10)
                 },
-                bodyHeight: Math.round(uakClamp(source.bodyHeight, 300, 560, 360) / 4) * 4,
                 bookMode: source.bookMode === "selected" ? "selected" : "random",
                 bookTitle: typeof source.bookTitle === "string" ? source.bookTitle : "活着",
                 units: ["auto", "short", "myriad"].includes(source.units) ? source.units : "auto"
@@ -1231,37 +1237,65 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
         let uakSettingsState = uakDefaultSettings();
         const uakSettingsListeners = new Set();
         let uakSettingsReady;
+        // Every local edit bumps this revision. An in-flight host read or save
+        // response only lands when no newer local edit happened meanwhile, so a
+        // slow boot fetch can never roll back a setting the user just changed.
+        let uakLocalRevision = 0;
+        let uakPendingSaves = 0;
         let uakSaveSequence = Promise.resolve();
+        function uakNotifySettings() {
+            for (const listener of [...uakSettingsListeners]) {
+                try { listener(uakSettingsState); } catch { /* one view must not break another */ }
+            }
+        }
+        function uakCommitSettings(next, options = {}) {
+            if (options.expectedLocalRevision !== undefined && options.expectedLocalRevision !== uakLocalRevision) {
+                return uakSettingsState;
+            }
+            if (options.remote === true && uakPendingSaves > 0) return uakSettingsState;
+            const sanitized = uakSanitizeSettings(next);
+            if (JSON.stringify(sanitized) === JSON.stringify(uakSettingsState)) return uakSettingsState;
+            uakSettingsState = sanitized;
+            if (options.remote !== true) uakLocalRevision += 1;
+            try { localStorage.setItem(UAK_SETTINGS_KEY, JSON.stringify(uakSettingsState)); } catch { /* server remains authoritative */ }
+            uakNotifySettings();
+            return uakSettingsState;
+        }
         const uakSettingsStore = {
             getState: () => uakSettingsState,
             subscribe(listener) {
                 uakSettingsListeners.add(listener);
                 return () => uakSettingsListeners.delete(listener);
             },
-            commit(next) {
-                const sanitized = uakSanitizeSettings(next);
-                if (JSON.stringify(sanitized) === JSON.stringify(uakSettingsState)) return uakSettingsState;
-                uakSettingsState = sanitized;
-                try { localStorage.setItem(UAK_SETTINGS_KEY, JSON.stringify(uakSettingsState)); } catch { /* server remains authoritative */ }
-                for (const listener of [...uakSettingsListeners]) {
-                    try { listener(uakSettingsState); } catch { /* one view must not break another */ }
-                }
-                return uakSettingsState;
+            commit(next) { return uakCommitSettings(next); },
+            /** Apply a server snapshot only when no local edit raced it. */
+            applyRemote(next, expectedLocalRevision) {
+                return uakCommitSettings(next, { remote: true, expectedLocalRevision });
             }
         };
+        async function uakHostSettings() {
+            const response = await fetch(UAK_SETTINGS_PATH, {
+                headers: { accept: "application/json", "x-dsh-uak-settings": "1" },
+                cache: "no-store"
+            });
+            const data = await response.json().catch(() => null);
+            return response.ok && data?.value ? data.value : null;
+        }
         function uakLoadSettings() {
-            if (uakSettingsReady) return uakSettingsReady;
+            if (uakSettingsReady) return uakSettingsReady.then(() => uakSettingsState);
             uakSettingsReady = (async () => {
                 let saved = null;
                 try { saved = JSON.parse(localStorage.getItem(UAK_SETTINGS_KEY) || "null"); } catch { /* ignore malformed local state */ }
-                if (saved && typeof saved === "object") uakSettingsStore.commit(saved);
-                else {
+                if (saved && typeof saved === "object") {
+                    uakSettingsStore.applyRemote(saved);
+                } else {
+                    // One-time migration from the original skin-master keys.
                     try {
                         const response = await fetch("/skin-master/settings", { headers: { accept: "application/json" } });
                         if (!response.ok) throw new Error("legacy settings unavailable");
                         const legacy = (await response.json())?.value;
                         if (legacy && typeof legacy === "object") {
-                            uakSettingsStore.commit({
+                            uakSettingsStore.applyRemote({
                                 imageUrl: legacy.imageUrl, imageMode: legacy.imageMode,
                                 blur: legacy.blur, opacity: legacy.opacity, scale: legacy.scale,
                                 brightness: legacy.brightness, contrast: legacy.contrast, saturate: legacy.saturate
@@ -1269,18 +1303,34 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                         }
                     } catch { /* defaults are a complete configuration */ }
                 }
+                const revision = uakLocalRevision;
+                const pending = uakPendingSaves;
                 try {
-                    const response = await fetch(UAK_SETTINGS_PATH, { headers: { accept: "application/json", "x-dsh-uak-settings": "1" } });
-                    const data = await response.json();
-                    if (response.ok && data?.value) uakSettingsStore.commit(data.value);
+                    const value = await uakHostSettings();
+                    if (value !== null && pending === 0 && uakPendingSaves === 0) {
+                        uakSettingsStore.applyRemote(value, revision);
+                    }
                 } catch { /* local fallback */ }
                 return uakSettingsState;
             })();
-            return uakSettingsReady;
+            return uakSettingsReady.then(() => uakSettingsState);
+        }
+        /** Re-read the host copy without dropping a newer local edit or an in-flight save. */
+        async function uakRefreshSettings() {
+            const revision = uakLocalRevision;
+            const pending = uakPendingSaves;
+            const value = await uakHostSettings();
+            if (value !== null && pending === 0 && uakPendingSaves === 0) {
+                uakSettingsStore.applyRemote(value, revision);
+            }
+            return uakSettingsState;
         }
         async function uakSaveSettings(value) {
             const next = uakSanitizeSettings(value);
             uakSettingsStore.commit(next);
+            const revision = uakLocalRevision;
+            uakPendingSaves += 1;
+            let savedValue;
             uakSaveSequence = uakSaveSequence.catch(() => {}).then(async () => {
                 const response = await fetch(UAK_SETTINGS_PATH, {
                     method: "POST", headers: { "content-type": "application/json", accept: "application/json", "x-dsh-uak-settings": "1" },
@@ -1288,8 +1338,17 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok || result.ok !== true) throw new Error(result.message || "配置保存失败");
+                savedValue = result.value;
             });
-            return uakSaveSequence;
+            try {
+                await uakSaveSequence;
+            } finally {
+                uakPendingSaves = Math.max(0, uakPendingSaves - 1);
+            }
+            // The pending counter is already released, so a host-side
+            // normalization (for example dropping a legacy field) can land now.
+            if (savedValue !== undefined) uakSettingsStore.applyRemote(savedValue, revision);
+            return uakSettingsState;
         }
         async function uakUploadImage(file) {
             const name = `${Date.now().toString(36)}-${String(file.name || "wallpaper").replace(/[^A-Za-z0-9._-]/g, "_")}`;
@@ -1305,6 +1364,39 @@ const UAK_SETTINGS_KEY = "utility-appearance-kit/settings";
                 if (!response.ok) throw new Error(`统计读取失败 (${response.status})`);
                 return response.json();
             });
+        }
+        /**
+         * Cross-view convergence for appearance settings. The store is shared
+         * by the settings page, the wallpaper layer and the monthly card in one
+         * page; a second window writes localStorage and (rarely) the host file.
+         * Both paths land here without a reload.
+         */
+        function uakMountSettingsSync() {
+            if (typeof window === "undefined" || typeof document === "undefined") return () => {};
+            if (typeof window.addEventListener !== "function" || typeof document.addEventListener !== "function") return () => {};
+            let lastRefresh = 0;
+            const refresh = () => {
+                const now = Date.now();
+                if (now - lastRefresh < 1500) return;
+                lastRefresh = now;
+                void uakRefreshSettings().catch(() => {});
+            };
+            const onStorage = (event) => {
+                if (event.key !== UAK_SETTINGS_KEY || typeof event.newValue !== "string") return;
+                try { uakSettingsStore.applyRemote(JSON.parse(event.newValue)); } catch { /* malformed peer state */ }
+            };
+            const onVisible = () => {
+                if (typeof document.visibilityState === "string" && document.visibilityState !== "visible") return;
+                refresh();
+            };
+            window.addEventListener("storage", onStorage);
+            window.addEventListener("focus", onVisible);
+            document.addEventListener("visibilitychange", onVisible);
+            return () => {
+                window.removeEventListener("storage", onStorage);
+                window.removeEventListener("focus", onVisible);
+                document.removeEventListener("visibilitychange", onVisible);
+            };
         }
         //#endregion
 
@@ -1431,6 +1523,9 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             if (signature === uakLastAppearance && layerAlive && styleAlive) return;
             uakLastAppearance = signature;
             const root = document.documentElement;
+            // Fixed once for every configuration: the monthly card's height is
+            // no longer user-configurable.
+            root.style.setProperty("--uak-stats-height", `${UAK_STATS_HEIGHT}px`);
             if (!cfg.imageUrl) {
                 uakClearAppearance(root);
                 root.classList.add("uak-liquid", "uak-no-blur");
@@ -1442,7 +1537,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             root.style.setProperty("--uak-bg-alpha", String(cfg.opacity / 100));
             root.style.setProperty("--uak-input-alpha", String(cfg.glassOpacity / 100));
             root.style.setProperty("--uak-glass-blur", `${cfg.glassBlur}px`);
-            root.style.setProperty("--uak-stats-height", `${cfg.bodyHeight}px`);
             const nodes = uakEnsureSkinNodes();
             const a = Math.min(Math.max(Number(cfg.opacity ?? 100), 0), 100) / 100;
             const tint = (r, g, b) => `rgba(${r},${g},${b},${a})`;
@@ -1506,56 +1600,66 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             let disposed = false;
             let retry = null;
             let unsubscribe = null;
+            let stopSync = null;
             let observer = null;
             let timer = null;
-            const attach = () => {
-                if (disposed || document.body) return true;
-                retry = setTimeout(attach, 50);
-                return false;
-            };
-            if (!attach()) {
-                return () => { disposed = true; if (retry !== null) clearTimeout(retry); };
-            }
-            // Reference: initSkin retries the host load before applying. The
-            // web server can still be cold on the first paint, and a single
-            // failed fetch used to leave the wallpaper off for the session.
-            const boot = async () => {
-                for (let attempt = 0; attempt < 5 && !disposed; attempt += 1) {
-                    try {
-                        const settings = await uakLoadSettings();
-                        if (!disposed) uakApplyAppearance(settings);
-                        return;
-                    } catch {
-                        await new Promise((resolve) => setTimeout(resolve, 400));
-                    }
-                }
-                if (!disposed) uakApplyAppearance(uakSettingsStore.getState());
-            };
-            void boot();
-            uakApplyAppearance(uakSettingsStore.getState());
-            uakMarkGlassSurfaces();
-            if (typeof MutationObserver === "function") {
-                observer = new MutationObserver((records) => {
-                    const added = records.some((record) => record.addedNodes.length > 0);
-                    if (!added || timer !== null) return;
-                    timer = setTimeout(() => {
-                        timer = null;
-                        for (const record of records) {
-                            for (const node of record.addedNodes) {
-                                if (node.nodeType === 1) uakMarkGlassSurfaces(node);
-                            }
+            // A host can compose client plugins before the document body exists
+            // (the Web shell inserts the boot graph into <head>). Waiting for the
+            // body and then mounting is what makes the wallpaper and every later
+            // setting apply on that first paint; the old retry re-checked the
+            // body and returned, so the layer was never mounted at all.
+            const mount = () => {
+                if (disposed || !document.body) return false;
+                // Reference: initSkin retries the host load before applying. The
+                // web server can still be cold on the first paint, and a single
+                // failed fetch used to leave the wallpaper off for the session.
+                const boot = async () => {
+                    for (let attempt = 0; attempt < 5 && !disposed; attempt += 1) {
+                        try {
+                            const settings = await uakLoadSettings();
+                            if (!disposed) uakApplyAppearance(settings);
+                            return;
+                        } catch {
+                            await new Promise((resolve) => setTimeout(resolve, 400));
                         }
-                    }, 80);
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
-            }
-            unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+                    }
+                    if (!disposed) uakApplyAppearance(uakSettingsStore.getState());
+                };
+                void boot();
+                uakApplyAppearance(uakSettingsStore.getState());
+                uakMarkGlassSurfaces();
+                if (typeof MutationObserver === "function") {
+                    observer = new MutationObserver((records) => {
+                        const added = records.some((record) => record.addedNodes.length > 0);
+                        if (!added || timer !== null) return;
+                        timer = setTimeout(() => {
+                            timer = null;
+                            for (const record of records) {
+                                for (const node of record.addedNodes) {
+                                    if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+                                }
+                            }
+                        }, 80);
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
+                unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+                stopSync = uakMountSettingsSync();
+                return true;
+            };
+            const start = () => {
+                if (disposed) return;
+                if (mount()) return;
+                retry = setTimeout(start, 50);
+            };
+            start();
             return () => {
                 disposed = true;
                 if (retry !== null) clearTimeout(retry);
                 observer?.disconnect();
                 if (timer !== null) clearTimeout(timer);
                 unsubscribe?.();
+                stopSync?.();
             };
         }
         //#endregion
@@ -2900,8 +3004,7 @@ const UAK_SETTINGS_CSS = `
                 const empty = request.status === "ready" && current.tokens === 0 && current.messages === 0;
                 const noSelectedMonth = request.status === "ready" && tab === "models" && range === "month" && !monthHasData;
 
-                const bodyHeight = Number.isFinite(Number(settings.bodyHeight))
-                    ? Math.max(180, Math.min(900, Number(settings.bodyHeight))) : 360;
+                const statsHeight = UAK_STATS_HEIGHT;
 
                 if (!visible) return null;
 
@@ -2922,7 +3025,7 @@ const UAK_SETTINGS_CSS = `
                 let heatLayout = heatTiers[heatTiers.length - 1];
                 let heatCell = heatTiers[heatTiers.length - 1].minCell;
                 for (const tier of heatTiers) {
-                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
+                    const avail = statsHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
                     const cell = Math.floor(avail / heatRows);
                     heatLayout = { ...tier, cell };
                     if (cell >= tier.minCell) {
@@ -2943,14 +3046,14 @@ const UAK_SETTINGS_CSS = `
                 // The metrics and footer alone can already fill a very short
                 // panel; only then does the band step aside instead of pushing
                 // them out of view.
-                const heatFits = bodyHeight - metricsHeight - footerHeight - 20 >= 40;
+                const heatFits = statsHeight - metricsHeight - footerHeight - 20 >= 40;
 
                 return h("section", {
                     ref: panelRef,
                     className: "uak-stats",
                     "aria-label": uakStatsT("stats.section"),
                     style: {
-                        "--uak-stats-height": `${bodyHeight}px`,
+                        "--uak-stats-height": `${statsHeight}px`,
                         "--uak-heat-cell": `${heatCell}px`,
                         "--uak-heat-gap": `${heatGap}px`,
                         "--uak-heat-pad": `${heatPadding}px`,
@@ -3145,13 +3248,26 @@ function uakCreateSettingsPage() {
                 const [bookTier, setBookTier] = react.useState("all");
                 const imageRef = react.useRef(null);
                 react.useEffect(() => uakSubscribeUiLocale(setRevision), []);
-                react.useEffect(() => { void uakLoadSettings().then(setDraft).catch(() => setMessage(uakTr("读取失败", "Could not load settings"))); }, []);
+                react.useEffect(() => {
+                    // Stay attached to the same store as the wallpaper layer and
+                    // the monthly card, so a change made in another window (or a
+                    // host refresh) updates this page without a remount.
+                    const unsubscribe = uakSettingsStore.subscribe((next) => setDraft(next));
+                    let active = true;
+                    void uakLoadSettings()
+                        .then((value) => { if (active) setDraft(value); })
+                        .catch(() => setMessage(uakTr("读取失败", "Could not load settings")));
+                    // Re-open with the host's current value, not only the cached
+                    // boot copy; a failure here keeps the local copy.
+                    void uakRefreshSettings().catch(() => {});
+                    return () => { active = false; unsubscribe(); };
+                }, []);
                 const commit = (next) => {
                     setDraft(next);
                     uakSettingsStore.commit(next);
                     void uakSaveSettings(next).then(() => setMessage(uakTr("已保存并即时生效。", "Saved and applied."))).catch(() => setMessage(uakTr("保存失败，请稍后重试。", "Could not save settings.")));
                 };
-                const update = (patch) => commit({ ...draft, ...patch });
+                const update = (patch) => commit({ ...uakSettingsStore.getState(), ...patch });
                 const chooseImage = (file) => {
                     if (!file) return;
                     setSaving(true);
@@ -3187,7 +3303,6 @@ function uakCreateSettingsPage() {
                         h("div", { className: "uak-book-catalog", role: "listbox", "aria-label": uakTr("选择书目", "Select a book") },
                             visibleBooks.map((book) => h("button", { key: book.title, type: "button", role: "option", "aria-selected": draft.bookMode === "selected" && draft.bookTitle === book.title, "data-active": draft.bookTitle === book.title ? "true" : "false", className: "uak-book-option", onClick: () => update({ bookMode: "selected", bookTitle: book.title }) },
                                 h("strong", null, uakTr(`《${book.title}》`, book.englishTitle)), h("span", null, uakTr(`约${book.chars / 10000}万字 · ${book.tier}`, `≈${uakFormatNumber(book.chars, "short")} chars · ${uakBookTier(book)}`))))),
-                        h("div", { className: "uak-setting-sliders" }, h(Slider, { label: uakTr("统计面板高度", "Statistics height"), value: draft.bodyHeight, min: 300, max: 560, step: 4, suffix: "px", onChange: (value) => update({ bodyHeight: value }) })),
                         h(Choice, { label: uakTr("数字单位", "Number units"), value: draft.units, onChange: (value) => update({ units: value }), options: [["auto", uakTr("跟随语言", "Follow language")], ["myriad", "万 / 亿"], ["short", "K / M / B"]] })),
                     h("button", { type: "button", className: "uak-save", disabled: saving, onClick: () => commit(uakDefaultSettings()) }, uakTr("恢复全部默认", "Reset all settings")),
                     h("p", { className: "uak-save-message", role: "status" }, message));
@@ -3480,10 +3595,7 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
 
         const apply = (ctx, config) => {
             const normalized = normalizeOptions(config);
-            const options = normalized.value ?? {
-                ...DEFAULT_OPTIONS,
-                declarations: "off",
-                slider: false,            };
+            const options = normalized.value ?? { ...DEFAULT_OPTIONS, slider: false };
             if (normalized.issues !== undefined) {
                 console.warn("[utility-appearance-kit] invalid config; optional UI disabled:", normalized.issues);
             }
@@ -3565,7 +3677,12 @@ const DIRECTORY_SERVICES = ["remote", "remote.session"];
                 uakStatsBookComparison,
                 uakStatsModelTable,
                 uakStatsStatus,
-                uakHoistAboveWorkspaceRow
+                uakHoistAboveWorkspaceRow,
+                UAK_STATS_HEIGHT,
+                uakSettingsStore,
+                uakLoadSettings,
+                uakRefreshSettings,
+                uakSanitizeSettings
             };
         }
         //#endregion

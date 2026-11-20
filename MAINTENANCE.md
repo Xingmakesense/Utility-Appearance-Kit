@@ -1,280 +1,226 @@
 # 维护手册
 
-面向**插件维护者**：厂商发布新模型、修改档位、或新增兼容端点时，按本手册更新。
+面向**插件维护者**：改代码、接新 DSH 基座、排查设置不生效或统计异常时按本手册走。
 
-普通使用者不需要读这个文件，直接看 [README](README.md) 即可。
+普通使用者只看 [README](README.md)。
 
 ---
 
 ## 目录
 
-1. [先判断该不该动](#1-先判断该不该动)
-2. [`capabilities.json` 结构](#2-capabilitiesjson-结构)
-3. [更新流程](#3-更新流程)
-4. [最常见的四个错误](#4-最常见的四个错误)
-5. [验证档位真的生效](#5-验证档位真的生效)
-6. [发布新版本](#6-发布新版本)
-7. [排查清单](#7-排查清单)
-8. [模块边界与 quota 维护](#8-模块边界与-quota-维护)
+1. [现在的模块边界](#1-现在的模块边界)
+2. [模型档位：只读原生设置](#2-模型档位只读原生设置)
+3. [设置为什么能即时生效](#3-设置为什么能即时生效)
+4. [桌面代理与请求头](#4-桌面代理与请求头)
+5. [热力图 360px 的高度预算](#5-热力图-360px-的高度预算)
+6. [客户端构建](#6-客户端构建)
+7. [统计聚合与缓存](#7-统计聚合与缓存)
+8. [节假日数据](#8-节假日数据)
+9. [验证与发布](#9-验证与发布)
+10. [排查清单](#10-排查清单)
+11. [历史经验与坑](#11-历史经验与坑)
+12. [`status.json` 字段](#12-statusjson-字段)
 
 ---
 
-## 1. 先判断该不该动
+## 1. 现在的模块边界
 
-插件补档位时有四级优先级，**只有 DSH 完全描述不了的模型**才需要改表或探测：
+```
+client/  runtime / options / slider / pricing / styles / topbar
+         appearance-data / appearance / settings-page / settings-styles
+         statistics-i18n / books / statistics / statistics-views / statistics-ui / apply
+host/    options / holiday / status / appearance / usage-store / usage-cache / usage-ledger / usage-route
+共享     holiday-calendar.js, holidays.json
+```
 
-| 优先级 | 来源 | 什么时候用 |
-|---|---|---|
-| 1 | 用户已写的 `reasoningEfforts` | 永远不覆盖，无需维护 |
-| 2 | DSH 的 `llm.resolveModelInfo()` | catalog 能描述的模型；报告只表示“已可选中”，插件不写配置 |
-| 3 | `capabilities.json` | 只对明确验证过的具体模型生效，没有家族兜底 |
-| 4 | 一次性探测 | 启动时对未知模型发 `max_tokens:1`，只声明实际探测的 `low` |
+- **Host 只有三条服务**：节假日路由与刷新、外观设置与图片路由、月度统计路由。它**不请求** `configEditor`，不读写 `llm-pi-ai` 配置。
+- **Client 不注入** `connection` 或 `credentials`；订阅额度、认证、DeepSeek 账户账本属于独立的 `dsh-Subscription-Management`。
+- 旧版的 `host/declarations.js`、`capabilities.json`、探测缓存和 `declarations` 配置已删除。不要以「兼容旧模型」为理由把它们加回来。
 
-判断方法：该模型的端点在 pi-ai catalog 里吗？
+---
 
-- **在**（如 `api.openai.com`、`api.moonshot.ai`、`api.z.ai`）→ 不用动表，catalog 升级后自动生效；
-- **不在**（自建网关、第三方中转、`https://api.example.com/v1` 这类）→ 先看是否需要探测，再考虑加明确规则。
+## 2. 模型档位：只读原生设置
 
-### 快速自检
+滑条的数据来源只有一条：
+
+```
+DSH 原生模型设置 / catalog
+        ↓
+modelDirectories.directoryFor(sessionId).store.groups[].models[].reasoning
+        ↓
+client/slider.js 的 levels / defaultEffort
+```
+
+- 档位数量、名称、默认值、线上值（含 `off: null`）都由 DSH 的模型目录决定；
+- 插件通过 `directory.select({ provider, model, reasoningEffort })` 提交，不自己拼请求；
+- 自定义/中转端点要让滑条出现，请在 **设置 → 模型 → 模型行 → 推理等级** 里声明；
+- 原生设置保存后，DSH 会刷新目录（`settings/document-updated`、`llm/models-updated` 等事件），滑条订阅同一个 store，无需刷新页面。
+
+**不要**再按模型前缀猜档位、不要探测端点、不要写 `compat` 或 `thinkingFormat`。这些工作在旧版曾导致「不同档位发同一个请求」和「写坏用户配置」两类问题。
+
+---
+
+## 3. 设置为什么能即时生效
+
+外观设置、壁纸层和月度统计卡共享 `client/appearance-data.js` 里的**同一个 store**。保持下面四条同时成立：
+
+1. **设置页订阅 store**：`uakSettingsStore.subscribe` 把远端或其它窗口的变化同步到当前表单；
+2. **提交即应用**：`commit` 同步更新内存状态并通知订阅者，壁纸层和统计卡立即重绘；
+3. **跨窗口同步**：`storage` 事件接收其它窗口的保存；窗口重新获得焦点/可见时调用 `uakRefreshSettings()` 从 Host 再读一次；
+4. **旧快照不能回滚新编辑**：每次本地提交递增 `uakLocalRevision`；Host 快照带着读取时的 revision 返回，`applyRemote` 只在 revision 未变、且没有在途保存时落地。
+
+Host 侧的 `GET /utility-appearance-kit/settings` 每次读取 `settings.json`，不做进程内缓存。旧实现缓存到进程重启，第二窗口或外部编辑读不到新值。
+
+**排查顺序**：先看设置页是否订阅了 store，再看 `uakCommitSettings` 是否被 revision 守卫挡掉，最后看 Host GET 是否返回旧文件。
+
+---
+
+## 4. 桌面代理与请求头
+
+DSH Desktop 用 `dsh-app://app` 自定义协议加载页面，其余路径转发到本地 Web server。转发器会：
+
+- 删除 `host`、`origin`、`cookie`、`sec-fetch-site`；
+- 补回 Host 进程的 cookie；
+- 放行自定义标记头（`x-dsh-uak-settings`、`x-dsh-uak-usage`）。
+
+因此自定义路由的信任判断：
+
+- **必须**要求私有标记头（写请求）或接受匿名读（图片 GET）；
+- **不能**要求 `host` 一定存在，也不能只信 `host`；
+- `origin` / `sec-fetch-site` 出现时才校验；`dsh-app://app` 与 `null` 视为原生外壳；
+- 路由保持 exact/prefix 精确匹配；不要注册 `/utility-appearance-kit` 通配前缀，否则会挡住其它插件（尤其是订阅插件的认证通道）。
+
+统计接口 `refuseRequest` 与外观接口应保持同一套判断；改其中一个时同时跑 `verify-routes.mjs` 和 `verify-usage.mjs`。
+
+---
+
+## 5. 热力图 360px 的高度预算
+
+统计卡高度固定为 `UAK_STATS_HEIGHT = 360`（`client/appearance-data.js`）。设置页**不提供**高度选项；`client/statistics-ui.js` 直接用这个常量计算布局。
+
+360px 内依次扣掉：
+
+```
+指标卡实测高度 + 说明行实测高度 + 20px 内容边距
++ 热力容器内边距 × 2 + 行间距 × 6
+= 七行正方形格子的可用高度
+```
+
+格子边长按 18 / 13 / 9px 三档回退；列数按面板宽度和格子尺寸取整（至少 22 列），所以宽面板是增加列数而不是拉伸格子。改高度或字号前先把这套算法在 1100px 与窄面板两种宽度下各目测一次。
+
+高度常量同时写入 `html { --uak-stats-height }` 和统计卡根节点，CSS 里的 360px 只是没有 JS 时的兜底。
+
+---
+
+## 6. 客户端构建
+
+- 源码在 `client/*.js`，按 `scripts/build-client.mjs` 里的顺序拼接成 `client.js`；
+- 改完源码必须运行 `node scripts/build-client.mjs`；
+- 提交前跑 `node scripts/build-client.mjs --check`，生成物过期会直接失败；
+- **不要**直接编辑 `client.js`；
+- 模块顺序有意义：`runtime → options → slider → pricing → styles → appearance-data → appearance → settings-styles → statistics-i18n → books → statistics → statistics-views → statistics-ui → settings-page → topbar → apply`。新增文件时同时改构建列表与 `package.json` 的 `files`。
+
+React 由 DSH 的模块加载器提供；`react-dom` 和 UI primitives 用 `try/catch` 可选加载。组件里的 Hook 数量必须稳定：提前 return 之前不要漏掉 Hook。
+
+---
+
+## 7. 统计聚合与缓存
+
+- 只读 DSH 的会话日志（`sessions/**/*.jsonl.zstd`），不读原统计插件的缓存或账本；
+- 解析缓存与累计账本在 `<DSH_HOME>/utility-appearance-kit/cache/`；
+- 缓存格式见 `host/usage-cache.js` 的 `VERSION`，改结构必须同时处理旧格式；
+- 账本只增不减：会话日志被删除后，历史计数仍保留；
+- 紧凑计数只保留非零小时、去掉零 token 的模型项；不要为了省空间丢掉正的 lifetime 历史；
+- 统计接口需要同源标记头 `x-dsh-uak-usage: 1`；`?refresh=1` 会强制重扫，仍要过同一道围栏。
+
+---
+
+## 8. 节假日数据
+
+- 包内 `holidays.json` 是离线基线（当前只含 2026 年）；
+- Host 每个北京月份最多请求一次公共日历，合并结果写入 `<profile>/.utility-appearance-kit/holidays.json`；
+- 请求失败保留旧值并 20 小时后再试；某年取不到时客户端显示「未知」，不要按「谷」处理；
+- 补新年份时可以手工编辑 profile 缓存，或等联网刷新。
+
+---
+
+## 9. 验证与发布
 
 ```bash
-cat ~/.dsh/profiles/<profile>/.utility-appearance-kit/status.json
-```
-
-看 `.engine.phase` 和 `.engine.reported`。若 `phase` 是 `declared` 且 `reported` 计数大于 0，说明 DSH 已经描述了部分模型；它们不会被表覆盖。
-
----
-
-## 2. `capabilities.json` 结构
-
-```json
-{
-  "version": 3,
-  "vendors": [
-    {
-      "name": "qwen",
-      "match": "^qwen",
-      "exclude": "(image|embed|rerank|tts|asr|ocr)",
-      "api": "openai-completions",
-      "levelsByModel": [
-        { "match": "^qwen3\\.8-", "levels": ["low", "medium", "xhigh"] },
-        { "match": "^qwen3\\.[67]-(max|plus|flash)$", "levels": ["off", "minimal", "low", "medium", "high"] }
-      ]
-    }
-  ]
-}
-```
-
-| 字段 | 作用 | 注意 |
-|---|---|---|
-| `name` | 可读名 | 不参与匹配，仅便于阅读 |
-| `match` | 模型 id 正则，决定归哪个厂商 | 不区分大小写 |
-| `exclude` | 命中则剔除 | **优先于 `match`**，用于排除图片/嵌入模型 |
-| `api` | 限定协议 | 与路由的 `api` 不同则不匹配；省略则不限 |
-| `levelsByModel[].match` | 单模型精确档位 | **从上往下，命中第一条即停；必须命中，否则不声明** |
-| `levelsByModel[].levels` | 该模型的档位列表 | 顺序即滑条从左到右 |
-| `levelsByModel[].wire` | 非恒等的线上值 | 例如 `{ "off": "none" }`；未写的档位发同名值 |
-| `levels` | **已废弃** | 不再有厂商级兜底；写了也会被忽略 |
-| `officialDialect` / `officialHosts` | **已废弃** | 不再猜测方言；交给 pi-ai 按端点/协议检测 |
-
-### 档位语义速查
-
-| 写法 | 含义 |
-|---|---|
-| `"off": null` | 支持关闭思考，**不发任何字段** |
-| `"off": "none"` | 支持关闭思考，**显式发送** `"none"` |
-| 不写某个档位 | **不支持**，滑条不会出现这一格 |
-| `"high": "high"` | 支持，线上发 `"high"` |
-
----
-
-## 3. 更新流程
-
-### 第 1 步：查到真实档位
-
-按可靠性排序：
-
-1. **厂商官方文档**的「思考 / reasoning effort / thinking」章节——最权威；
-2. **pi-ai catalog**（如果已覆盖同款模型）——打开 `@earendil-works/pi-ai` 包内的 `providers/data/<vendor>.json`，看该模型的 `thinkingLevelMap`。
-
-判断规则（与 pi-ai 的 `getSupportedThinkingLevels()` 一致）：
-
-```
-thinkingLevelMap[level] === null        → 不支持
-level 是 xhigh / max 且键不存在          → 不支持（这两种没有「默认支持」）
-level 是 off 且值为 null                 → 支持，但不发字段
-其他，值为字符串                          → 支持，发这个字符串
-```
-
-### 第 2 步：决定改哪里
-
-| 情况 | 改哪里 |
-|---|---|
-| 新模型属于已有家族，档位与其他模型不同 | 加一条完整的 `levelsByModel` 规则（不要依赖家族兜底） |
-| 新模型属于全新厂商 | 新增一个 `vendors` 条目，只写明确的模型规则 |
-| 模型换了个网关，档位没变 | **不用改**——插件不写 `compat`，方言由 pi-ai 检测 |
-| 厂商自己的域名变了 | **不用改**——插件不再按域名固定方言 |
-
-### 第 3 步：写规则
-
-```json
-{ "match": "^vendor-model\\.\\d+$", "levels": ["low", "medium", "high"] }
-```
-
-要点：
-
-- 具体规则放在宽泛规则**前面**；
-- 模型 id 里的 `.` 必须转义成 `\\.`；
-- 非恒等的线上值写 `wire`，例如 `{ "levels": ["off", "high"], "wire": { "off": "none" } }`；
-- 只在确认支持时才写 `off`。
-
-### 第 4 步：跑测试
-
-```bash
-node scripts/build-client.mjs --check # client.js 必须与 client/*.js 同步
-node verify-host.cjs                 # 精确档位、报告不写回、无兜底、compat 不被改动
-node verify-engine.mjs               # 端到端：扫描 → 计划 → 写入
-node verify-holidays.mjs             # 节假日部分失败与回退
-node verify-client.mjs               # 滑条 + quota 选择/格式/状态/竞态/开关
-node verify-compat.mjs               # 包清单与已安装 DSH 槽位
-```
-
-断言失败说明新规则覆盖了既有模型，调整正则或同步更新断言。**不要**为了让旧断言通过而恢复家族级兜底。
-
-### 第 5 步：生效
-
-1. 改 `capabilities.json`；
-2. **升 `package.json` 版本号**（必须，否则包管理器不会重新解包）；
-3. 运行 `scripts/build-tgz.ps1` 打包；
-4. 通过插件管理器安装新 tgz；
-5. **删掉 profile 里受影响的旧 `reasoningEfforts`**；
-6. 重启 DSH，或等待配置变更扫描。
-
-> 第 5 步最容易漏。插件只在字段缺失时才写，已有值一律视为用户决定。
-> 装完新版本没变化，先看 profile 的 `cordis.patch.yml` 里那段旧声明是否还在。
-
-profile 位置：
-
-```
-~/.dsh/profiles/<profile>/cordis.patch.yml
-```
-
----
-
-## 4. 最常见的四个错误
-
-### ① `levelsByModel` 顺序错了
-
-```json
-"levelsByModel": [
-  { "match": "^kimi", "levels": [...] },            // ❌ 先命中，下面永远轮不到
-  { "match": "^kimi-k2\\.7-code", "levels": [...] }
-]
-```
-
-**宽规则必须放在最后。**
-
-### ② 多写了 `off`
-
-很多模型既没有 `off`，也**不需要**它。写了会让滑条多出一格，用户拖过去就报 `UNSUPPORTED_REASONING_EFFORT`。
-
-### ③ 正则没转义
-
-```json
-{ "match": "^qwen3.8" }    // ❌ 也会匹配 qwen3x8
-{ "match": "^qwen3\\.8" }  // ✅
-```
-
-### ④ 把方言当档位修
-
-如果某个厂商的档位**顺序对、数量对，但线上行为都一样**（比如三档都只发一个开关），问题在端点协议或 pi-ai 为该模型检测出的 `compat`，不在 `levels`。插件从 `1.0.0` 起不再写 `thinkingFormat`/`supportsReasoningEffort`，也不按 URL 子串推断方言；请检查 catalog 的 compat 和实际 endpoint，不要重新引入 `officialHosts`。
-
-诊断方法见下一节。
-
----
-
-## 5. 验证档位真的生效
-
-**报错信息不能证明档位生效。** 零余额、401、超时都只说明请求发出去了，不说明 `reasoning_effort` 带了什么。
-
-要看请求体里的字段：
-
-| 方言 | 应该出现 |
-|---|---|
-| `openai`（默认） | `reasoning_effort: "low"` / `"medium"` / ... |
-| `zai` | `thinking: { type: "enabled" }` + `reasoning_effort` |
-| `deepseek` | `thinking: { type: "enabled" }` + `reasoning_effort` |
-| `qwen` | `enable_thinking: true` + `reasoning_effort` |
-
-**判据：如果不同档位的请求体完全相同，说明档位被折叠成了一个开关**——那是适配器/`compat` 或端点协议问题。插件本身不再合成方言。
-
-抓取请求体的方式：
-
-- 在 `llm/stream` 层拦截；
-- 或用 mitmproxy / Fiddler 之类的工具抓 HTTPS；
-- 或临时在 `host/declarations.js` 的 `probeThinking` 附近加日志。
-
----
-
-## 6. 发布新版本
-
-```bash
-# 1. 改代码
-# 2. 升版本号（patch）
-# 3. 生成并检查浏览器模块
 node scripts/build-client.mjs
 node scripts/build-client.mjs --check
-# 4. 跑测试
-node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs \
-  && node verify-client.mjs && node verify-compat.mjs
-# 5. 打包
-pwsh -File scripts/build-tgz.ps1
-# 6. 安装
-#    plugin_manager → install_bundle → 指向新的 tgz
+node --check client.js
+node verify-host.cjs
+node verify-holidays.mjs
+node verify-client.mjs
+node verify-compat.mjs
+node verify-features.mjs
+node verify-usage.mjs
+node verify-routes.mjs
 ```
 
-提交信息建议用 Conventional Commits：
+发布步骤：
+
+1. 改代码；
+2. 升 `package.json` 版本号（patch/minor，按变更性质）；
+3. 重新生成 `client.js`；
+4. 跑全套测试；
+5. `pwsh -File scripts/build-tgz.ps1` 打包；
+6. 通过插件管理器安装 tgz，刷新页面。
+
+提交信息建议使用 Conventional Commits：
 
 ```
-fix: stop overwriting pi-ai catalog levels
-feat: size the slider per reasoning level
-docs: add maintenance guide
+feat: move effort levels to native model settings
+fix: keep appearance settings live across windows
+docs: rewrite the maintenance guide
 ```
 
 ---
 
-## 7. 排查清单
+## 10. 排查清单
 
 | 现象 | 先查 |
 |---|---|
-| 滑条不出现 | profile 里该模型是否有 `reasoning` 元数据；`status.json` 的 `.engine.phase` |
-| 滑条档位数不对 | 该模型是否走了第 3/4 级；规则是否命中；是否被 DSH 报告跳过 |
-| 拖过去就回弹 | 该档位是否真的受支持；看 `UNSUPPORTED_REASONING_EFFORT` 的报错 |
-| 改了表没效果 | 版本号是否升了；旧 `reasoningEfforts` 是否还在；模型是否已被 DSH 报告覆盖 |
-| 每档行为一样 | 适配器/`compat` 或端点协议（见第 5 节） |
-| `.engine.phase: error` | 看 `error`；常见是 `HMR transactions cannot be nested`（瞬时冲突，插件会自动重试）或超时 |
+| 滑条不出现 | 该模型在原生设置里是否有推理等级；`modelDirectories` 是否可用；会话是否 subagent |
+| 档位数不对 | 原生模型设置里的档位声明；是否还在跑旧版插件 |
+| 拖过去回弹 | 该档位是否真的受支持；`UNSUPPORTED_REASONING_EFFORT` 的报错 |
+| 改了设置要刷新 | 设置页是否订阅 store；revision 守卫是否拦掉旧快照；Host GET 是否还缓存 |
+| 设置保存失败 | 标记头是否被转发器保留；响应是否 403；`settings.json` 是否可写 |
+| 统计卡报错 | `/utility-appearance-kit/usage` 的 403/500；会话日志目录；缓存/账本是否损坏 |
+| 热力图挤压 | 360px 预算是否被指标卡撑爆；`ResizeObserver` 是否量到高度 |
+| 节假日显示未知 | 当前年份是否已在基线或 profile 缓存中；网络刷新是否成功 |
+| `verify-compat` 解析 asar 失败 | 头部 4 字节对齐；DSH 版本是否 >= 0.2.2-rc.3 |
 
 ---
 
-## 8. 拆分后的模块边界
+## 11. 历史经验与坑
 
-- 本项目只维护滑条、峰谷、顶栏和档位声明，不再包含订阅卡片、订阅认证或 DeepSeek 账户账本。
-- `dsh-Subscription-Management` 独立维护这些功能，两个项目不得互相复制状态文件或账户 RPC。
-- Client 仅由 `runtime/options/slider/pricing/styles/topbar/apply` 组成；Host 仅由 `options/declarations/holiday/status` 组成。
-- 不向 Client 注入 `connection` 或 `credentials`，避免无用服务初始化和账户数据驻留内存。
+1. **代写配置的代价。** 旧引擎通过 `configEditor.edit` 补 `reasoningEfforts`。基座升级后这类写入更容易撞上 `HMR transactions cannot be nested`，重试也只是把问题推迟；同时原生模型设置开始管理同一个字段，两边互相覆盖。结论：档位只读原生，插件不写配置。
+2. **不要探测。** `max_tokens:1` 的探测只能证明「该端点没拒绝这个字段」，不能证明档位存在；把探测结果写成完整档位会让下一次真实调用 400。
+3. **方言不归插件管。** `thinkingFormat` / `supportsReasoningEffort` 由 pi-ai 的 catalog 和端点检测决定；按模型前缀或 URL 子串猜方言曾让不同模型顺序产生不同结果。
+4. **Host 头不可依赖。** 桌面转发器会删 `host`/`origin`/`sec-fetch-site`；信任只能建立在私有标记头和「出现时才校验」的跨站信号上。
+5. **进程内缓存会杀死「实时」。** 外观设置曾经缓存到进程重启，第二个窗口永远读旧值；现在 GET 每次读文件，客户端用 revision 守卫合并。
+6. **异步启动会回滚编辑。** 首次加载的 Host 快照如果晚于用户保存返回，就会把新值改回去；`uakLocalRevision` + `uakPendingSaves` 是为此加的。改 store 时保留这两个守卫。
+7. **asar 头部有 4 字节对齐。** 读取文件要用 `16 + align4(headerSize) + offset`；否则 `verify-compat.mjs` 会在新版 DSH 上把 `package.json` 解析成垃圾。
+8. **生成物与源码会分叉。** 忘记跑构建时，测试和运行时各用一份代码；`--check` 是唯一防线。
+9. **固定高度是布局契约。** 360px 是热力图七行、指标卡和说明行共同的结果；把它改回设置项会重新引入「不同机器高度不一致」的问题。
+10. **精确路由是隔离手段。** 外观路由曾占用 `/utility-appearance-kit` 通配前缀，挡住订阅插件的认证；现在只注册 settings、asset、usage、holidays 四条精确/受限路径。
+11. **外观挂载要等 `document.body`。** 客户端插件可能先于 HTML body 完成组合；旧代码的重试只重新检查 body，随后直接返回，导致壁纸和所有外观设置第一条命都不生效。现在 `uakMountAppearance` 会一直等到 body 再挂载，修改时不要退回「只检查不继续」的写法。
 
-## 附：`status.json` 字段
+---
+
+## 12. `status.json` 字段
 
 位置：`~/.dsh/profiles/<profile>/.utility-appearance-kit/status.json`
 
-`engine`、`holiday`、`plugin` 三个作用域各自保留最后一次状态，互不覆盖；顶层的 `phase` 只是最后一次写入的副本。
+`plugin` 与 `holiday` 两个作用域各自保留最后一次状态，互不覆盖；顶层的 `phase` 只是最后一次写入的副本。
 
 | 字段 | 含义 |
 |---|---|
-| `engine.phase` | `inject-wait` / `injected` / `scheduled` / `scan` / `declared` / `clean` / `error` / `hmr-busy`；`declarations-disabled` 表示 `declarations: "off"`，`config-error` 表示插件配置非法 |
-| `engine.reason` | 触发扫描的原因：`boot` / `adapters` / `config` / `retry` |
-| `engine.changes` | 本次实际写入的模型列表 |
-| `engine.reported` | 从 DSH 拿到报告的模型数量 |
-| `engine.error` | 仅错误状态出现 |
+| `plugin.phase` | `apply` / `config-error` |
+| `plugin.error` | 配置非法时的说明 |
 | `holiday.phase` | `route-ready` / `route-error` / `calendar` / `calendar-error` |
 | `holiday.changed` / `failedYears` | 是否有年份写入、哪些年份失败 |
+
+旧版的 `engine.*` 字段已不再写入，升级后第一次记录状态时会被清理；`probes.json` 也可以安全删除。

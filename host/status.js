@@ -2,23 +2,23 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export function cachePath() {
+/** Absolute path of the per-profile diagnostic breadcrumb. */
+export function statusPath() {
     const base = process.env.DSH_PROFILE_DIR ?? join(homedir(), ".dsh", "profiles", process.env.DSH_PROFILE ?? "desktop");
-    return join(base, ".utility-appearance-kit", "probes.json");
+    return join(base, ".utility-appearance-kit", "status.json");
 }
 
 /**
  * Tiny diagnostic breadcrumb in the profile (`<profile>/.utility-appearance-kit/status.json`).
- * Engine and calendar diagnostics live under separate keys so a later holiday
- * refresh cannot erase the declaration engine's last phase (the old flat file
- * made `declared` disappear seconds after it was written).
+ * Plugin and calendar diagnostics live under separate keys so a later holiday
+ * refresh cannot erase the plugin's last phase.
  *
- * @param {"plugin"|"engine"|"holiday"} scope diagnostic producer.
+ * @param {"plugin"|"holiday"} scope diagnostic producer.
  * @param {Record<string, unknown>} patch fields to merge into that scope.
  */
 export function recordStatus(scope, patch) {
     try {
-        const path = join(dirname(cachePath()), "status.json");
+        const path = statusPath();
         mkdirSync(dirname(path), { recursive: true });
         let previous = {};
         try {
@@ -28,6 +28,10 @@ export function recordStatus(scope, patch) {
             // first write
         }
         const at = Date.now();
+        // The declaration engine is gone; a profile upgraded from 2.6.x still
+        // carries its last engine scope. Drop it instead of publishing a stale
+        // phase forever.
+        delete previous.engine;
         const body = JSON.stringify({
             ...previous,
             ...patch,

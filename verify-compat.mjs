@@ -5,9 +5,7 @@ import { join } from "node:path";
 const manifest = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 const client = readFileSync(new URL("./client.js", import.meta.url), "utf8");
 const host = readFileSync(new URL("./host.js", import.meta.url), "utf8");
-const hostDeclarations = readFileSync(new URL("./host/declarations.js", import.meta.url), "utf8");
 const hostHoliday = readFileSync(new URL("./host/holiday.js", import.meta.url), "utf8");
-const hostSource = "";
 const readme = readFileSync(new URL("./README.md", import.meta.url), "utf8");
 const patch = readFileSync(new URL("./cordis.patch.yml", import.meta.url), "utf8");
 const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
@@ -36,7 +34,6 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "client/apply.js",
     "host.js",
     "host/options.js",
-    "host/declarations.js",
     "host/holiday.js",
     "host/status.js",
     "host/appearance.js",
@@ -46,7 +43,6 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "host/usage-route.js",
     "holiday-calendar.js",
     "holidays.json",
-    "capabilities.json",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
@@ -57,7 +53,6 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     "scripts/build-client.mjs",
     "scripts/build-tgz.ps1",
     "verify-host.cjs",
-    "verify-engine.mjs",
     "verify-holidays.mjs",
     "verify-client.mjs",
     "verify-compat.mjs",
@@ -67,7 +62,7 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
 ]) {
         assert.equal(manifest.files.includes(file), true, file + " must stay in the packed files");
     }
-    assert.match(manifest.engines?.dsh ?? "", /0\.2\.1-rc\.2/);
+    assert.match(manifest.engines?.dsh ?? "", /0\.2\.2-rc\.3/);
     assert.ok(readme.includes("> 版本 \x60" + manifest.version + "\x60"), "README version must match package.json");
     assert.match(patch, /id:\s*utility-appearance-kit/);
     assert.match(patch, /name:\s*utility-appearance-kit/);
@@ -97,8 +92,12 @@ const icon = readFileSync(new URL("./icon.svg", import.meta.url), "utf8");
     assert.equal(client.includes('const navLabel = () => uakTr("外观与月度书卷", "Appearance & Monthly Books")'), true,
         "settings navigation must never expose a raw locale key");
     assert.equal(client.includes("videoUrl"), false, "video wallpaper must stay removed");
+    assert.equal(client.includes("bodyHeight"), false, "the statistics height must stay a fixed 360 px");
+    assert.equal(client.includes("UAK_STATS_HEIGHT = 360"), true, "the fixed height constant must exist");
+    assert.equal(client.includes("planDeclarations"), false, "the declaration engine must stay removed");
+    assert.equal(host.includes("installDeclarationEngine"), false, "the host must not mount the declaration engine");
+    assert.equal(host.includes("configEditor"), false, "the host must not depend on configEditor");
     assert.equal(host.includes("installAccountData"), false, "account module must not load in Utility");
-    assert.equal(hostDeclarations.includes("MODEL_INFO_TIMEOUT_MS"), true, "model-info timeout must remain");
     assert.equal(hostHoliday.includes("refreshHolidays"), true, "holiday refresh must remain");
 }
 
@@ -173,7 +172,12 @@ function readAsarFile(asar, target) {
         }
         if (node.files !== undefined) return undefined;
         const body = Buffer.alloc(Number(node.size));
-        readSync(fd, body, 0, body.length, 16 + headerSize + Number(node.offset));
+        // The header JSON is padded to a 4-byte boundary inside the pickle.
+        // Reading from `16 + headerSize` shifted every file by the padding and
+        // made `dsh/package.json` unparseable on asars whose header is not
+        // already aligned (DSH 0.2.2).
+        const dataStart = 16 + Math.ceil(headerSize / 4) * 4;
+        readSync(fd, body, 0, body.length, dataStart + Number(node.offset));
         return body.toString("utf8");
     } finally {
         closeSync(fd);
@@ -188,23 +192,26 @@ if (asar === undefined) {
     const dshPackage = readAsarFile(asar, "dsh/package.json");
     const installedVersion = dshPackage === undefined ? undefined : JSON.parse(dshPackage).version;
     assert.ok(installedVersion !== undefined, "the installed DSH version is unreadable");
-    assert.equal(atLeast(installedVersion, "0.2.1-rc.2"), true,
-        `installed DSH ${installedVersion} is below the tested 0.2.1-rc.2 floor`);
+    assert.equal(atLeast(installedVersion, "0.2.2-rc.3"), true,
+        `installed DSH ${installedVersion} is below the tested 0.2.2-rc.3 floor`);
 
     const conversation = readAsarFile(asar, "dsh/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js") ?? "";
     const sidebar = readAsarFile(asar, "dsh/node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js") ?? "";
+    const modelSelection = readAsarFile(asar, "dsh/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js") ?? "";
     const preload = readAsarFile(asar, "lib/preload-app.cjs") ?? "";
     assert.equal(conversation.includes('"conversation.input.right"'), true, "installed conversation lacks the right slot");
     assert.equal(sidebar.includes('"sidebar.brand.name"'), true, "installed sidebar lacks the brand-name slot");
     assert.equal(sidebar.includes('"sidebar.footer.action"'), true, "installed sidebar lacks the quota footer slot");
     assert.equal(sidebar.includes('"sidebar.settings"'), true, "installed sidebar lacks the settings section seat");
-    assert.equal(sidebar.includes('renderSlot("sidebar.footer.action", { wide })'), true,
+    assert.match(sidebar, /renderSlot\(\s*[\x60"']sidebar\.footer\.action[\x60"']\s*,\s*\{\s*wide\s*\}\s*\)/,
         "quota footer must receive the sidebar wide/compact layout prop");
+    assert.equal(modelSelection.includes("modelDirectories"), true,
+        "installed model selection no longer exposes the native model directory service");
     assert.equal(preload.includes("data-windows-menu") || preload.includes("windowsMenu"), true,
         "installed desktop no longer exposes the caption menu");
     assert.equal(preload.includes("attachShadow({ mode: \"open\" })"), true,
         "caption menu shadow root is no longer open");
-    console.log(`compatibility: DSH ${installedVersion}, caption shadow root and composer slots match`);
+    console.log(`compatibility: DSH ${installedVersion}, native model directory, caption shadow root and composer slots match`);
 }
 
 console.log("compatibility checks passed");

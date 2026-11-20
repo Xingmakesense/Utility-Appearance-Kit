@@ -245,8 +245,7 @@
                 const empty = request.status === "ready" && current.tokens === 0 && current.messages === 0;
                 const noSelectedMonth = request.status === "ready" && tab === "models" && range === "month" && !monthHasData;
 
-                const bodyHeight = Number.isFinite(Number(settings.bodyHeight))
-                    ? Math.max(180, Math.min(900, Number(settings.bodyHeight))) : 360;
+                const statsHeight = UAK_STATS_HEIGHT;
 
                 if (!visible) return null;
 
@@ -267,7 +266,7 @@
                 let heatLayout = heatTiers[heatTiers.length - 1];
                 let heatCell = heatTiers[heatTiers.length - 1].minCell;
                 for (const tier of heatTiers) {
-                    const avail = bodyHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
+                    const avail = statsHeight - metricsHeight - footerHeight - 20 - tier.pad * 2 - tier.gap * (heatRows - 1);
                     const cell = Math.floor(avail / heatRows);
                     heatLayout = { ...tier, cell };
                     if (cell >= tier.minCell) {
@@ -288,14 +287,14 @@
                 // The metrics and footer alone can already fill a very short
                 // panel; only then does the band step aside instead of pushing
                 // them out of view.
-                const heatFits = bodyHeight - metricsHeight - footerHeight - 20 >= 40;
+                const heatFits = statsHeight - metricsHeight - footerHeight - 20 >= 40;
 
                 return h("section", {
                     ref: panelRef,
                     className: "uak-stats",
                     "aria-label": uakStatsT("stats.section"),
                     style: {
-                        "--uak-stats-height": `${bodyHeight}px`,
+                        "--uak-stats-height": `${statsHeight}px`,
                         "--uak-heat-cell": `${heatCell}px`,
                         "--uak-heat-gap": `${heatGap}px`,
                         "--uak-heat-pad": `${heatPadding}px`,

@@ -24,13 +24,26 @@
                 const [bookTier, setBookTier] = react.useState("all");
                 const imageRef = react.useRef(null);
                 react.useEffect(() => uakSubscribeUiLocale(setRevision), []);
-                react.useEffect(() => { void uakLoadSettings().then(setDraft).catch(() => setMessage(uakTr("读取失败", "Could not load settings"))); }, []);
+                react.useEffect(() => {
+                    // Stay attached to the same store as the wallpaper layer and
+                    // the monthly card, so a change made in another window (or a
+                    // host refresh) updates this page without a remount.
+                    const unsubscribe = uakSettingsStore.subscribe((next) => setDraft(next));
+                    let active = true;
+                    void uakLoadSettings()
+                        .then((value) => { if (active) setDraft(value); })
+                        .catch(() => setMessage(uakTr("读取失败", "Could not load settings")));
+                    // Re-open with the host's current value, not only the cached
+                    // boot copy; a failure here keeps the local copy.
+                    void uakRefreshSettings().catch(() => {});
+                    return () => { active = false; unsubscribe(); };
+                }, []);
                 const commit = (next) => {
                     setDraft(next);
                     uakSettingsStore.commit(next);
                     void uakSaveSettings(next).then(() => setMessage(uakTr("已保存并即时生效。", "Saved and applied."))).catch(() => setMessage(uakTr("保存失败，请稍后重试。", "Could not save settings.")));
                 };
-                const update = (patch) => commit({ ...draft, ...patch });
+                const update = (patch) => commit({ ...uakSettingsStore.getState(), ...patch });
                 const chooseImage = (file) => {
                     if (!file) return;
                     setSaving(true);
@@ -66,7 +79,6 @@
                         h("div", { className: "uak-book-catalog", role: "listbox", "aria-label": uakTr("选择书目", "Select a book") },
                             visibleBooks.map((book) => h("button", { key: book.title, type: "button", role: "option", "aria-selected": draft.bookMode === "selected" && draft.bookTitle === book.title, "data-active": draft.bookTitle === book.title ? "true" : "false", className: "uak-book-option", onClick: () => update({ bookMode: "selected", bookTitle: book.title }) },
                                 h("strong", null, uakTr(`《${book.title}》`, book.englishTitle)), h("span", null, uakTr(`约${book.chars / 10000}万字 · ${book.tier}`, `≈${uakFormatNumber(book.chars, "short")} chars · ${uakBookTier(book)}`))))),
-                        h("div", { className: "uak-setting-sliders" }, h(Slider, { label: uakTr("统计面板高度", "Statistics height"), value: draft.bodyHeight, min: 300, max: 560, step: 4, suffix: "px", onChange: (value) => update({ bodyHeight: value }) })),
                         h(Choice, { label: uakTr("数字单位", "Number units"), value: draft.units, onChange: (value) => update({ units: value }), options: [["auto", uakTr("跟随语言", "Follow language")], ["myriad", "万 / 亿"], ["short", "K / M / B"]] })),
                     h("button", { type: "button", className: "uak-save", disabled: saving, onClick: () => commit(uakDefaultSettings()) }, uakTr("恢复全部默认", "Reset all settings")),
                     h("p", { className: "uak-save-message", role: "status" }, message));

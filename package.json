@@ -1,7 +1,7 @@
 {
   "name": "utility-appearance-kit",
-  "version": "2.6.2",
-  "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示、图片壁纸、液态/磨砂玻璃与月度书卷统计。 · Reasoning controls, image wallpaper, layered glass, and monthly usage statistics.",
+  "version": "2.7.0",
+  "description": "Utility-Appearance-Kit：推理强度滑条、峰谷指示、图片壁纸、液态/磨砂玻璃与固定 360px 的月度书卷统计。 · Reasoning slider driven by native model settings, image wallpaper, layered glass, and a fixed-height monthly usage card.",
   "type": "module",
   "main": "host.js",
   "exports": {
@@ -31,7 +31,6 @@
     "client/apply.js",
     "host.js",
     "host/options.js",
-    "host/declarations.js",
     "host/holiday.js",
     "host/status.js",
     "host/appearance.js",
@@ -41,7 +40,6 @@
     "host/usage-route.js",
     "holiday-calendar.js",
     "holidays.json",
-    "capabilities.json",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
@@ -53,7 +51,6 @@
     "scripts/build-client.mjs",
     "scripts/build-tgz.ps1",
     "verify-host.cjs",
-    "verify-engine.mjs",
     "verify-holidays.mjs",
     "verify-client.mjs",
     "verify-compat.mjs",
@@ -71,18 +68,20 @@
   },
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
-    "check": "node scripts/build-client.mjs --check && node --check client.js && node --check host.js && node --check host/options.js && node --check host/declarations.js && node --check host/holiday.js && node --check host/status.js && node --check holiday-calendar.js && node --check scripts/build-client.mjs",
-    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-engine.mjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs && node verify-features.mjs && node verify-usage.mjs && node verify-routes.mjs"
+    "check": "node scripts/build-client.mjs --check && node --check client.js && node --check host.js && node --check host/options.js && node --check host/holiday.js && node --check host/status.js && node --check host/appearance.js && node --check host/usage-route.js && node --check host/usage-store.js && node --check host/usage-cache.js && node --check host/usage-ledger.js && node --check holiday-calendar.js && node --check scripts/build-client.mjs",
+    "test": "node scripts/build-client.mjs --check && node verify-host.cjs && node verify-holidays.mjs && node verify-client.mjs && node verify-compat.mjs && node verify-features.mjs && node verify-usage.mjs && node verify-routes.mjs"
   },
   "engines": {
-    "dsh": ">=0.2.1-rc.2"
+    "dsh": ">=0.2.2-rc.3"
   },
   "keywords": [
     "dsh",
     "plugin",
     "reasoning",
     "effort",
-    "slider"
+    "slider",
+    "wallpaper",
+    "statistics"
   ],
   "author": "June M",
   "license": "MIT"

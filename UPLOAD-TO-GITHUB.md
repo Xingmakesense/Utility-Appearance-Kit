@@ -7,7 +7,6 @@
 ```bash
 node scripts/build-client.mjs --check
 node verify-host.cjs
-node verify-engine.mjs
 node verify-holidays.mjs
 node verify-client.mjs
 node verify-compat.mjs
@@ -16,7 +15,7 @@ node verify-usage.mjs
 node verify-routes.mjs
 ```
 
-以上 8 个验证脚本全部通过后再上传。
+以上 7 个验证脚本全部通过后再上传。
 
 ## 创建仓库
 
@@ -40,11 +39,11 @@ node scripts/build-client.mjs
 pnpm pack --pack-destination dist
 ```
 
-将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.6.2`，建议标签 `v2.6.2`：
+将生成的 `.tgz` 上传到 GitHub Releases。版本号为 `2.7.0`，建议标签 `v2.7.0`：
 
 ```bash
-git tag -a v2.6.2 -m "2.6.2"
-git push origin v2.6.2
+git tag -a v2.7.0 -m "2.7.0"
+git push origin v2.7.0
 ```
 
 ## 必须排除
@@ -54,4 +53,4 @@ git push origin v2.6.2
 - `.env`、密钥、token、Cookie、OAuth 凭据文件
 - 本机绝对路径、个人 profile 数据和真实账户响应
 
-`.gitignore` 已覆盖常见产物。上传前仍应执行敏感词检查，并确认 `subscriptions.json`（如果本项目包含）与 `host/subscriptions/`（如果本项目包含）已提交。
+`.gitignore` 已覆盖常见产物。上传前仍应执行敏感词检查，并确认没有把本地设置文件或缓存目录提交进去。

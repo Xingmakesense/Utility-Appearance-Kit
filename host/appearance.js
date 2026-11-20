@@ -32,7 +32,6 @@ export function sanitizeAppearance(raw) {
         brightness: clamp(value.brightness, 50, 150, 100),
         glassOpacity: clamp(value.glassOpacity, 20, 95, 70), glassBlur: clamp(value.glassBlur, 0, 40, 18),
         popBg: { alpha: clamp(pop.alpha, 0, 100, 40), blur: clamp(pop.blur, 0, 40, 10) },
-        bodyHeight: Math.round(clamp(value.bodyHeight, 300, 560, 360) / 4) * 4,
         bookMode: value.bookMode === "selected" ? "selected" : "random",
         bookTitle: typeof value.bookTitle === "string" ? value.bookTitle.slice(0, 100) : "活着",
         units: ["auto", "short", "myriad"].includes(value.units) ? value.units : "auto"
@@ -88,12 +87,12 @@ export function installAppearance(ctx) {
     const assets = join(directory, "assets");
     const settingsPath = join(directory, "settings.json");
     const legacyAssets = join(homeOf(ctx), "dsh-skin-master", "assets");
-    let cachedSettings;
+    // Always read the file: a long-lived page (or a second window) refreshes
+    // through GET, and an in-process cache made that read return a stale value
+    // until the process restarted.
     const read = () => {
-        if (cachedSettings !== undefined) return cachedSettings;
-        try { cachedSettings = sanitizeAppearance(JSON.parse(readFileSync(settingsPath, "utf8"))); }
-        catch { cachedSettings = sanitizeAppearance(null); }
-        return cachedSettings;
+        try { return sanitizeAppearance(JSON.parse(readFileSync(settingsPath, "utf8"))); }
+        catch { return sanitizeAppearance(null); }
     };
     ctx.inject(["webServer"], (scope) => {
         if (typeof scope.webServer?.register !== "function") return;
@@ -107,7 +106,6 @@ export function installAppearance(ctx) {
                     const value = sanitizeAppearance(body);
                     try { if (readFileSync(settingsPath, "utf8") === JSON.stringify(value, null, 2)) return json(response, 200, { ok: true, value }); } catch { /* first save */ }
                     saveAtomic(settingsPath, value);
-                    cachedSettings = value;
                     return json(response, 200, { ok: true, value });
                 }
                 if (url.pathname === ASSET_ROUTE && request.method === "POST") {

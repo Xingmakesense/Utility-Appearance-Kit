@@ -38,7 +38,7 @@ const client = captured.factory((id) => id === "react" ? {
 const {
     uakBooks, uakBookTier, uakHeatThresholds, uakMonthHeatmap, uakSummarizeMonth,
     uakSanitizeSettings, uakFormatNumber, uakStatsT, uakStatsHeatmap,
-    uakHoistAboveWorkspaceRow,
+    uakHoistAboveWorkspaceRow, UAK_STATS_HEIGHT,
 } = client;
 const day = (tokens, messages = 2, model = "deepseek-flash") => ({
     tokens, messages, hours: Array.from({ length: 24 }, (_, hour) => hour === 14 ? tokens : 0),
@@ -170,7 +170,10 @@ assert.equal(uakStatsHeatmap({ year: 2026, month: 3, summary: {}, today: "2026-0
 }
 const defaults = uakSanitizeSettings({});
 assert.equal(defaults.bookMode, "random");
-assert.equal(defaults.bodyHeight, 360);
+assert.equal(UAK_STATS_HEIGHT, 360, "the statistics card height is fixed at 360 px");
+assert.equal("bodyHeight" in defaults, false, "the statistics height is no longer a setting");
+assert.equal("bodyHeight" in uakSanitizeSettings({ bodyHeight: 520 }), false,
+    "a legacy persisted height must not return");
 assert.equal(defaults.glassBlur, 18);
 assert.equal(uakSanitizeSettings({ imageUrl: "javascript:alert(1)" }).imageUrl, "");
 // The popover preference lives under `popBg` since 721527f; the flat keys are

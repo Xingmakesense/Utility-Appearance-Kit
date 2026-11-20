@@ -89,10 +89,7 @@
 
         const apply = (ctx, config) => {
             const normalized = normalizeOptions(config);
-            const options = normalized.value ?? {
-                ...DEFAULT_OPTIONS,
-                declarations: "off",
-                slider: false,            };
+            const options = normalized.value ?? { ...DEFAULT_OPTIONS, slider: false };
             if (normalized.issues !== undefined) {
                 console.warn("[utility-appearance-kit] invalid config; optional UI disabled:", normalized.issues);
             }
@@ -174,6 +171,11 @@
                 uakStatsBookComparison,
                 uakStatsModelTable,
                 uakStatsStatus,
-                uakHoistAboveWorkspaceRow
+                uakHoistAboveWorkspaceRow,
+                UAK_STATS_HEIGHT,
+                uakSettingsStore,
+                uakLoadSettings,
+                uakRefreshSettings,
+                uakSanitizeSettings
             };
         }

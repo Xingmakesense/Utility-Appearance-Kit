@@ -120,6 +120,9 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             if (signature === uakLastAppearance && layerAlive && styleAlive) return;
             uakLastAppearance = signature;
             const root = document.documentElement;
+            // Fixed once for every configuration: the monthly card's height is
+            // no longer user-configurable.
+            root.style.setProperty("--uak-stats-height", `${UAK_STATS_HEIGHT}px`);
             if (!cfg.imageUrl) {
                 uakClearAppearance(root);
                 root.classList.add("uak-liquid", "uak-no-blur");
@@ -131,7 +134,6 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             root.style.setProperty("--uak-bg-alpha", String(cfg.opacity / 100));
             root.style.setProperty("--uak-input-alpha", String(cfg.glassOpacity / 100));
             root.style.setProperty("--uak-glass-blur", `${cfg.glassBlur}px`);
-            root.style.setProperty("--uak-stats-height", `${cfg.bodyHeight}px`);
             const nodes = uakEnsureSkinNodes();
             const a = Math.min(Math.max(Number(cfg.opacity ?? 100), 0), 100) / 100;
             const tint = (r, g, b) => `rgba(${r},${g},${b},${a})`;
@@ -195,55 +197,65 @@ html.uak-liquid [class*='_portal_']::before, html.uak-liquid [class*='_list_']::
             let disposed = false;
             let retry = null;
             let unsubscribe = null;
+            let stopSync = null;
             let observer = null;
             let timer = null;
-            const attach = () => {
-                if (disposed || document.body) return true;
-                retry = setTimeout(attach, 50);
-                return false;
-            };
-            if (!attach()) {
-                return () => { disposed = true; if (retry !== null) clearTimeout(retry); };
-            }
-            // Reference: initSkin retries the host load before applying. The
-            // web server can still be cold on the first paint, and a single
-            // failed fetch used to leave the wallpaper off for the session.
-            const boot = async () => {
-                for (let attempt = 0; attempt < 5 && !disposed; attempt += 1) {
-                    try {
-                        const settings = await uakLoadSettings();
-                        if (!disposed) uakApplyAppearance(settings);
-                        return;
-                    } catch {
-                        await new Promise((resolve) => setTimeout(resolve, 400));
-                    }
-                }
-                if (!disposed) uakApplyAppearance(uakSettingsStore.getState());
-            };
-            void boot();
-            uakApplyAppearance(uakSettingsStore.getState());
-            uakMarkGlassSurfaces();
-            if (typeof MutationObserver === "function") {
-                observer = new MutationObserver((records) => {
-                    const added = records.some((record) => record.addedNodes.length > 0);
-                    if (!added || timer !== null) return;
-                    timer = setTimeout(() => {
-                        timer = null;
-                        for (const record of records) {
-                            for (const node of record.addedNodes) {
-                                if (node.nodeType === 1) uakMarkGlassSurfaces(node);
-                            }
+            // A host can compose client plugins before the document body exists
+            // (the Web shell inserts the boot graph into <head>). Waiting for the
+            // body and then mounting is what makes the wallpaper and every later
+            // setting apply on that first paint; the old retry re-checked the
+            // body and returned, so the layer was never mounted at all.
+            const mount = () => {
+                if (disposed || !document.body) return false;
+                // Reference: initSkin retries the host load before applying. The
+                // web server can still be cold on the first paint, and a single
+                // failed fetch used to leave the wallpaper off for the session.
+                const boot = async () => {
+                    for (let attempt = 0; attempt < 5 && !disposed; attempt += 1) {
+                        try {
+                            const settings = await uakLoadSettings();
+                            if (!disposed) uakApplyAppearance(settings);
+                            return;
+                        } catch {
+                            await new Promise((resolve) => setTimeout(resolve, 400));
                         }
-                    }, 80);
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
-            }
-            unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+                    }
+                    if (!disposed) uakApplyAppearance(uakSettingsStore.getState());
+                };
+                void boot();
+                uakApplyAppearance(uakSettingsStore.getState());
+                uakMarkGlassSurfaces();
+                if (typeof MutationObserver === "function") {
+                    observer = new MutationObserver((records) => {
+                        const added = records.some((record) => record.addedNodes.length > 0);
+                        if (!added || timer !== null) return;
+                        timer = setTimeout(() => {
+                            timer = null;
+                            for (const record of records) {
+                                for (const node of record.addedNodes) {
+                                    if (node.nodeType === 1) uakMarkGlassSurfaces(node);
+                                }
+                            }
+                        }, 80);
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
+                unsubscribe = uakSettingsStore.subscribe(uakApplyAppearance);
+                stopSync = uakMountSettingsSync();
+                return true;
+            };
+            const start = () => {
+                if (disposed) return;
+                if (mount()) return;
+                retry = setTimeout(start, 50);
+            };
+            start();
             return () => {
                 disposed = true;
                 if (retry !== null) clearTimeout(retry);
                 observer?.disconnect();
                 if (timer !== null) clearTimeout(timer);
                 unsubscribe?.();
+                stopSync?.();
             };
         }

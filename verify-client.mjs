@@ -55,7 +55,11 @@ const {
     mergeCalendar,
     nextPeakChangeAt,
     remainingLabel,
-    normalizeOptions
+    normalizeOptions,
+    UAK_STATS_HEIGHT,
+    uakSettingsStore,
+    uakLoadSettings,
+    uakSanitizeSettings
 } = module.__test;
 
 const offDays = buildHolidaySet(HOLIDAY_FALLBACK);
@@ -156,12 +160,14 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
 }
 
 
-// G. Independent switches and invalid-config fallback. Subscription features are
-//    packaged separately, so this plugin never requests connection/credentials.
+// G. One switch and invalid-config fallback. The removed declarations mode
+//    must not turn an upgraded profile into an invalid config.
 {
-    assert.deepEqual(normalizeOptions(undefined).value, { declarations: "auto", slider: true });
-    assert.deepEqual(normalizeOptions({ declarations: "off", slider: false }).value,
-        { declarations: "off", slider: false });
+    assert.deepEqual(normalizeOptions(undefined).value, { slider: true });
+    assert.deepEqual(normalizeOptions({ slider: false }).value, { slider: false });
+    assert.deepEqual(normalizeOptions({ declarations: "off", slider: true }).value, { slider: true },
+        "the obsolete declarations switch must be dropped");
+    assert.deepEqual(normalizeOptions({ slider: true, future: 1 }).value, { slider: true, future: 1 });
     assert.ok(Array.isArray(normalizeOptions({ slider: "yes" }).issues));
     const capture = (options) => {
         const injected = [];
@@ -183,7 +189,7 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
         module.apply(ctx, options);
         return { injected: injected.slice(-1), slotKeys };
     };
-    const nativeOnly = capture({ declarations: "off", slider: false });
+    const nativeOnly = capture({ slider: false });
     const requiredSlots = ["settings.section", "settings.utility-appearance-kit.item", "conversation.input.dock"];
     // `locale` joined the inject list in 04dcad3 so the settings surface never
     // prints a raw key; the slot list is what must not drift.
@@ -195,6 +201,34 @@ const at = (year, month, day, hour, minute = 0) => Date.UTC(year, month - 1, day
     const invalid = capture({ slider: "invalid" });
     assert.deepEqual(invalid.injected, [["slots", "locale"]]);
     assert.deepEqual(invalid.slotKeys, [...requiredSlots, "sidebar.brand.name"]);
+}
+
+// H. Settings are shared live state. A host snapshot that raced a newer local
+//    edit must be dropped; a stale boot read used to roll back a just-saved
+//    value. The statistics height is a constant, not a stored field.
+{
+    assert.equal(UAK_STATS_HEIGHT, 360);
+    assert.equal("bodyHeight" in uakSanitizeSettings({}), false, "the removed height must not reappear");
+    assert.equal("bodyHeight" in uakSanitizeSettings({ bodyHeight: 500 }), false,
+        "a legacy persisted height must be ignored");
+    const before = uakSettingsStore.getState();
+    let changes = 0;
+    const unsubscribe = uakSettingsStore.subscribe(() => { changes += 1; });
+    const committed = uakSettingsStore.commit({ ...before, opacity: 42 });
+    assert.equal(committed.opacity, 42, "a local commit applies immediately");
+    assert.ok(changes > 0, "subscribers must be notified synchronously");
+    const revision = 0; // Older than the local commit above.
+    const stale = uakSettingsStore.applyRemote({ ...committed, opacity: 7 }, revision);
+    assert.equal(stale.opacity, 42, "a stale host snapshot must not undo a newer local edit");
+    const fresh = uakSettingsStore.applyRemote({ ...committed, brightness: 120 });
+    assert.equal(fresh.brightness, 120, "an uncontested host snapshot applies");
+    // A settings page remount calls uakLoadSettings() again. It must resolve
+    // with the current store value; the old cached promise returned the boot
+    // snapshot and repainted every slider with its startup value.
+    const reloaded = await uakLoadSettings();
+    assert.equal(reloaded.opacity, 42, "a remount must read the current state, not the boot snapshot");
+    assert.equal(reloaded.brightness, 120, "the current brightness must survive a remount");
+    unsubscribe();
 }
 
 console.log("client slider and pricing checks passed");
