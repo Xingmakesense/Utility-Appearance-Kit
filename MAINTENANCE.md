@@ -73,6 +73,8 @@ Host 侧的 `GET /utility-appearance-kit/settings` 每次读取 `settings.json`�
 
 **排查顺序**：先看设置页是否订阅了 store，再看 `uakCommitSettings` 是否被 revision 守卫挡掉，最后看 Host GET 是否返回旧文件。
 
+设置页重新挂载时（关闭再打开设置面板）只能读**当前 store**。`uakLoadSettings()` 只负责完成一次启动加载，之后必须返回当前状态；把它改回「返回启动快照的 Promise」会让所有滑条跳回启动值，下一次编辑还会用旧 draft 合并并写回 Host，表现为「实时生效但保持不住」。
+
 ---
 
 ## 4. 桌面代理与请求头
@@ -207,6 +209,7 @@ docs: rewrite the maintenance guide
 9. **固定高度是布局契约。** 360px 是热力图七行、指标卡和说明行共同的结果；把它改回设置项会重新引入「不同机器高度不一致」的问题。
 10. **精确路由是隔离手段。** 外观路由曾占用 `/utility-appearance-kit` 通配前缀，挡住订阅插件的认证；现在只注册 settings、asset、usage、holidays 四条精确/受限路径。
 11. **外观挂载要等 `document.body`。** 客户端插件可能先于 HTML body 完成组合；旧代码的重试只重新检查 body，随后直接返回，导致壁纸和所有外观设置第一条命都不生效。现在 `uakMountAppearance` 会一直等到 body 再挂载，修改时不要退回「只检查不继续」的写法。
+12. **设置页重挂载不能回读启动快照。** `uakLoadSettings()` 的 Promise 曾被当成「永远返回启动值」的缓存；关闭再打开设置页时，`setDraft(bootSnapshot)` 把滑条全部拉回启动值，随后 `{...draft, ...patch}` 又把这些旧值写回 Host，于是效果实时生效却保持不住。现在它返回当前 store，且每次编辑都从 store 取基础值。
 
 ---
 

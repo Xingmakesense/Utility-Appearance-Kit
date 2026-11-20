@@ -161,7 +161,7 @@ node verify-routes.mjs                # 外观路由隔离
 
 - **不要代写 DSH 配置。** 旧版宿主半侧会扫描模型、补写 `reasoningEfforts`、探测未知端点。基座升级后这些写入更容易撞上 HMR 事务冲突，而且会和原生模型设置抢同一个字段。档位现在只有一个来源：原生模型设置；插件只读目录快照。
 - **桌面代理会剥掉请求头。** DSH Desktop 的 `dsh-app://app` 转发器会删除 `host`、`origin`、`cookie`、`sec-fetch-site`，再补回 cookie。自定义路由的信任判断只能依赖**私有标记头 + 出现时才校验的跨站信号**，不能要求 `host` 一定存在；路由保持 exact/prefix 精确匹配，不要占用整个 `/utility-appearance-kit` 前缀。
-- **设置只有一份状态。** 设置页、壁纸层和统计卡共用同一个 store；服务端 GET 每次读文件，客户端在 `storage`/聚焦时刷新，并且**较旧的远端快照不能覆盖更新的本地编辑**（本地 revision 守卫）。这三件事少一件，就会出现「改了设置要刷新才生效」。
+- **设置只有一份状态。** 设置页、壁纸层和统计卡共用同一个 store；服务端 GET 每次读文件，客户端在 `storage`/聚焦时刷新，并且**较旧的远端快照不能覆盖更新的本地编辑**（本地 revision 守卫）。设置页重挂载时读当前 store，不能回读启动快照；每次编辑也从 store 取基础值，否则会出现「实时生效但保持不住」。
 - **热力图高度是布局预算，不是普通像素值。** 360px 要同时容纳指标卡、七行热力格和说明行；格子尺寸从测量高度反推。改高度常量前先看 [MAINTENANCE.md](MAINTENANCE.md) 的高度预算说明。
 - **生成物不要手改。** `client.js` 是 `scripts/build-client.mjs` 拼接出来的；改完 `client/*.js` 必须重新生成，否则测试与运行时各跑一份。
 - **读 asar 要按 4 字节对齐。** asar 头部的 JSON 长度会补到 4 字节边界；用 `16 + headerSize + offset` 读文件会整体偏移，`verify-compat.mjs` 曾因此在 DSH 0.2.2 上解析失败。
